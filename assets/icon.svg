@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#191c26" />
+      <stop offset="100%" stop-color="#0c0d10" />
+    </linearGradient>
+    <radialGradient id="glowAmber" cx="72%" cy="24%" r="60%">
+      <stop offset="0%" stop-color="#fb923c" stop-opacity="0.32" />
+      <stop offset="100%" stop-color="#fb923c" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="glowEmerald" cx="25%" cy="80%" r="55%">
+      <stop offset="0%" stop-color="#34d399" stop-opacity="0.18" />
+      <stop offset="100%" stop-color="#34d399" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="bowlGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fb923c" />
+      <stop offset="60%" stop-color="#f97316" />
+      <stop offset="100%" stop-color="#ea580c" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fdba74" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+  </defs>
+
+  <!-- Full bleed dark canvas for iOS auto-masking -->
+  <rect width="512" height="512" fill="url(#bgGrad)" />
+  <rect width="512" height="512" fill="url(#glowAmber)" />
+  <rect width="512" height="512" fill="url(#glowEmerald)" />
+
+  <!-- Subtle outer bento frame -->
+  <rect x="44" y="44" width="424" height="424" rx="96" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4" />
+
+  <!-- Chopsticks -->
+  <line x1="292" y1="122" x2="210" y2="262" stroke="#e5e7eb" stroke-width="14" stroke-linecap="round" />
+  <line x1="344" y1="138" x2="238" y2="264" stroke="#cbd5e1" stroke-width="14" stroke-linecap="round" />
+
+  <!-- Rice / Meal Dome -->
+  <path d="M 142 260 C 142 195, 370 195, 370 260 Z" fill="#fef3c7" opacity="0.95" />
+
+  <!-- Bowl Body -->
+  <path d="M 118 258 L 394 258 C 394 345, 336 394, 256 394 C 176 394, 118 345, 118 258 Z" fill="url(#bowlGrad)" />
+  <!-- Bowl Rim Highlight -->
+  <rect x="110" y="246" width="292" height="22" rx="11" fill="#fdba74" />
+  <!-- Bowl Base -->
+  <rect x="202" y="388" width="108" height="24" rx="10" fill="#c2410c" />
+
+  <!-- Floating Mini Dice Badge (top-left) -->
+  <g transform="translate(124, 118) rotate(-12)">
+    <rect x="0" y="0" width="76" height="76" rx="20" fill="#1e222e" stroke="url(#accentGrad)" stroke-width="5" />
+    <circle cx="24" cy="24" r="7" fill="#fb923c" />
+    <circle cx="52" cy="52" r="7" fill="#34d399" />
+    <circle cx="38" cy="38" r="7" fill="#f8fafc" />
+  </g>
+</svg>
