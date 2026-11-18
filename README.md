@@ -1,22 +1,21 @@
-# Meal Picker（今天吃什麼｜真實地圖俯視飛躍抽籤 PWA）
+# Meal Picker（今天吃什麼｜俯視地圖 × 360° Google 街景 PWA）
 
-專為 iPhone 打造的**極簡真實地圖俯視抽籤 PWA**。打開即載入台中北區 49 間口袋名單的真實經緯度座標與免 Key 衛星／街道底圖，依目前營業時段與距離抽出下一餐，點擊「出發去吃」直接喚醒 Google Maps App 導航；背景自動同步 Google Sheets 與記憶近期吃過紀錄，避免天天重複。
+專為 iPhone 打造的**極簡真實地圖與 360° 街景抽籤 PWA**。打開即從 49 間台中北區口袋名單抽選下一餐，動畫結束無縫跳進店家門口的 **360° 真實 Google 街景**，可手指左右環視店面外觀；點擊「出發去吃」直接喚醒 Google Maps App 導航。
 
 - **線上版（GitHub Pages）**：https://berton0310.github.io/meal-picker/
 - **口袋名單試算表（Google Sheets）**：https://docs.google.com/spreadsheets/d/1Fi_2OYvhbuii5sqEGOT5n5EWnjiYqSi-6nlnPFzBp7g/edit
 
 ---
 
-## 三種俯視鏡頭動畫節奏（頂部一鍵切換比較）
+## 三種「輪轉跳街景」動畫轉場（頂部即時切換）
 
-1. **A 跳躍俯衝（`hop`）**：高空俯視 $\rightarrow$ 鏡頭在最多 4 間候選餐廳座標間快速跳躍切換 $\rightarrow$ 最後俯衝拉近鎖定中獎店家並彈出資訊卡。
-2. **B 跨區飛行（`fly`）**：從上一間餐廳座標以拋物線高度曲線平滑飛行（先拉高鳥瞰台中街區、再俯衝降落），沿途繪製飛行弧線，抵達後展開店家資訊卡。
-3. **C 鳥瞰掃描（`radar`）**：鏡頭先退至全區鳥瞰視角框住所有候選店，瞄準光標於各座標間由快而慢跳躍閃爍 $\rightarrow$ 定格後垂直推進放大鎖定目標。
+1. **A 俯衝跳街景（`dive`）**：高空衛星俯視地圖在候選店間快速跳點 $\rightarrow$ 鎖定屋頂極速俯衝放大 $\rightarrow$ 穿雲切入該店 360° Google 街景（左上保留子母定位小雷達）。
+2. **B 轉輪跳街景（`reel`）**：中央立體座標轉輪高速滾動店名與經緯度 $\rightarrow$ 過衝定格展開，直接揭曉背景已預載好的 360° 店門口街景。
+3. **C 子母雙視角（`split`）**：上半部俯視地圖執行全區雷達掃描並推近，下半部數位快門同步跳轉該店 360° 街景，定格時上下同框呈現街道方位與店門口實景。
 
-### 內建三種免 API Key 真實底圖（右上角切換）
-- **衛星**：Esri World Imagery 真實衛星俯視圖 ＋ World Transportation 路網疊層
-- **暗黑**：OpenStreetMap 繁體中文街道圖資（深夜高對比戰術暗黑濾鏡）
-- **街道**：OpenStreetMap 原色繁體中文清晰街道底圖
+### 自由視角切換 ＋ 三種真實圖資
+- **三種視角一鍵切換**：`滿版街景`（含左上角可點擊放大的子母雷達窗）、`上下雙視角`、`俯視地圖`（附快速按鈕跳進 360° 街景）。
+- **三種真實地圖底圖（右上角切換）**：**衛星（Esri）**、**暗黑（OpenStreetMap 高對比）**、**街道（OpenStreetMap 原色）**。
 
 ---
 
@@ -24,10 +23,10 @@
 
 ```text
 meal-picker/
-├── index.html                  # 全螢幕地圖俯視抽籤介面與懸浮 HUD
-├── app.js                      # Web Mercator 圖磚金字塔、3 種鏡頭飛行動畫與抽籤邏輯
+├── index.html                  # 360° 街景 × 俯視地圖 × 3D 轉輪三合一主介面
+├── app.js                      # 圖磚金字塔、街景背景預載、三種轉場引擎與權重計算
 ├── manifest.json               # PWA 全螢幕設定
-├── sw.js                       # Service Worker 離線快取（外部圖磚直接聯網）
+├── sw.js                       # Service Worker 離線快取（v4）
 ├── assets/
 │   ├── icon.svg                # 向量 App Icon
 │   ├── icon-180.png            # iOS apple-touch-icon
@@ -46,17 +45,10 @@ meal-picker/
 
 ---
 
-## iPhone 安裝至主畫面（只要 10 秒）
+## iPhone 安裝至主畫面
 
 1. 在 iPhone 使用 **Safari** 打開：https://berton0310.github.io/meal-picker/
-2. 點擊底部工具列正中央的 **「分享」** $\rightarrow$ 選擇 **「加入主畫面」**。
-3. 桌面點擊圖示啟動即可享受無網址列全螢幕體驗，支援手動拖曳／雙指縮放地圖與直接點選地圖座標切換餐廳。
-
----
-
-## 日後維護口袋名單
-
-直接打開上方的 [Google Sheets 試算表](https://docs.google.com/spreadsheets/d/1Fi_2OYvhbuii5sqEGOT5n5EWnjiYqSi-6nlnPFzBp7g/edit) 增刪或修改營業時間（欄位規範：`id, name, category, rating, reviews, lat, lng, mon~sun, maps_url, note, enabled`），手機下次打開 PWA 就會在背景自動同步最新名單。
+2. 點擊底部工具列 **「分享」** $\rightarrow$ **「加入主畫面」**，即可獨立全螢幕開啟。
 
 ---
 

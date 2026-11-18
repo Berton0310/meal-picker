@@ -484,15 +484,17 @@
     const LOCK_ZOOM = 16.75;
 
     const CAMERA_MODES = {
-      hop: { btnLabel: '跳躍抽下一間', flyLabel: '正從高空跳躍挑選候選餐廳…' },
-      fly: { btnLabel: '飛往下一間', flyLabel: '正跨越台中北區飛往目標座標…' },
-      radar: { btnLabel: '掃描抽下一間', flyLabel: '正執行全區座標雷達掃描…' }
+      dive: { btnLabel: '俯衝抽下一間', flyLabel: '正從高空跳躍並俯衝切入 360° 街景…' },
+      reel: { btnLabel: '轉輪抽下一間', flyLabel: '座標轉輪高速鎖定，即將展開實景街景…' },
+      split: { btnLabel: '雙視角抽下一間', flyLabel: '俯視雷達掃描並同步開啟 360° 街景…' }
     };
+
+    const VIEW_MODES = ['streetview', 'split', 'map'];
 
     const MAP_LAYERS = {
       sat: {
         label: '衛星',
-        attrib: '衛星圖資 © Esri · World Transportation',
+        attrib: '衛星圖資 © Esri · World Transportation · Google Street View',
         isDark: true,
         tileFilter: null,
         baseUrl: (z, x, y) =>
@@ -502,7 +504,7 @@
       },
       dark: {
         label: '暗黑',
-        attrib: '暗黑街道 © OpenStreetMap contributors',
+        attrib: '暗黑街道 © OpenStreetMap · Google Street View',
         isDark: true,
         tileFilter: 'invert(92%) hue-rotate(185deg) saturate(82%) brightness(92%) contrast(96%)',
         baseUrl: (z, x, y) => `https://tile.openstreetmap.org/${z}/${x}/${y}.png`,
@@ -510,7 +512,7 @@
       },
       street: {
         label: '街道',
-        attrib: '街道圖資 © OpenStreetMap contributors',
+        attrib: '街道圖資 © OpenStreetMap · Google Street View',
         isDark: false,
         tileFilter: null,
         baseUrl: (z, x, y) => `https://tile.openstreetmap.org/${z}/${x}/${y}.png`,
@@ -538,22 +540,26 @@
     }
 
     const savedPrefs = Object.assign(
-      { mode: 'hop', layer: 'sat', category: '全部', onlyOpen: true },
+      { mode: 'dive', view: 'streetview', layer: 'sat', category: '全部', onlyOpen: true },
       loadJson(STORAGE_KEYS.prefs, {})
     );
 
     const searchParams = new URLSearchParams(window.location.search);
     const urlMode = searchParams.get('mode');
+    const urlView = searchParams.get('view');
     const urlLayer = searchParams.get('layer');
     if (CAMERA_MODES[urlMode]) savedPrefs.mode = urlMode;
+    if (VIEW_MODES.includes(urlView)) savedPrefs.view = urlView;
     if (MAP_LAYERS[urlLayer]) savedPrefs.layer = urlLayer;
-    if (!CAMERA_MODES[savedPrefs.mode]) savedPrefs.mode = 'hop';
+    if (!CAMERA_MODES[savedPrefs.mode]) savedPrefs.mode = 'dive';
+    if (!VIEW_MODES.includes(savedPrefs.view)) savedPrefs.view = 'streetview';
     if (!MAP_LAYERS[savedPrefs.layer]) savedPrefs.layer = 'sat';
     if (!CATEGORIES.includes(savedPrefs.category)) savedPrefs.category = '全部';
 
     const cachedWrap = loadJson(STORAGE_KEYS.placesCache, null);
     const appState = {
       prefs: savedPrefs,
+      activeView: savedPrefs.view,
       places: (cachedWrap && Array.isArray(cachedWrap.places) && cachedWrap.places.length > 0)
         ? cachedWrap.places
         : DEFAULT_PLACES,
@@ -570,6 +576,17 @@
       scanLinks: [],
       camera: { lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng, zoom: LOCK_ZOOM }
     };
+
+    const stageViewport = document.getElementById('stageViewport');
+    const mapPane = document.getElementById('mapPane');
+    const svFrame = document.getElementById('svFrame');
+    const svShutter = document.getElementById('svShutter');
+    const shutterStoreName = document.getElementById('shutterStoreName');
+    const shutterCoord = document.getElementById('shutterCoord');
+    const reelOverlay = document.getElementById('reelOverlay');
+    const reelTrack = document.getElementById('reelTrack');
+    const reelCountTag = document.getElementById('reelCountTag');
+    const enterSvFloatingBtn = document.getElementById('enterSvFloatingBtn');
 
     // ==================== Web Mercator 投影與圖磚金字塔 ====================
     function clampZoom(z) {
@@ -609,6 +626,17 @@
     const viewport = { width: 390, height: 844, dpr: 1 };
 
     function getAnchorPoint() {
+      if (appState.activeView === 'streetview') {
+        return { x: viewport.width * 0.5, y: viewport.height * 0.5 };
+      }
+      if (appState.activeView === 'split') {
+        const hudClearTop = 122;
+        const midY = hudClearTop + Math.max(40, viewport.height - hudClearTop) * 0.52;
+        return {
+          x: viewport.width * 0.5,
+          y: Math.max(viewport.height * 0.5, Math.min(viewport.height * 0.74, midY))
+        };
+      }
       return {
         x: viewport.width * 0.5,
         y: viewport.height * 0.455
@@ -925,7 +953,10 @@
       const candidates = getCandidates();
       const activeTarget = appState.focusPlace || appState.currentPick;
       const activeKey = activeTarget ? placeKey(activeTarget) : null;
-      const showNearbyLabels = appState.camera.zoom >= 15.6;
+      const isPip = appState.activeView === 'streetview' || viewport.width < 180;
+      const showNearbyLabels = appState.camera.zoom >= 15.6 && !isPip;
+      const minLabelY = 128;
+      const maxLabelY = appState.activeView === 'split' ? viewport.height - 18 : viewport.height - 210;
       const placedBoxes = [];
 
       if (activeTarget && Number.isFinite(activeTarget.lat) && Number.isFinite(activeTarget.lng)) {
@@ -943,9 +974,9 @@
         const pt = projectToScreen(c.lat, c.lng);
         if (pt.x < -16 || pt.x > viewport.width + 16 || pt.y < -16 || pt.y > viewport.height + 16) return;
 
-        const r = appState.camera.zoom >= 15.6 ? 5.5 : 4.2;
+        const r = isPip ? 2.6 : (appState.camera.zoom >= 15.6 ? 5.5 : 4.2);
         ctx.beginPath();
-        ctx.arc(pt.x, pt.y, r + 2, 0, Math.PI * 2);
+        ctx.arc(pt.x, pt.y, r + (isPip ? 1.2 : 2), 0, Math.PI * 2);
         ctx.fillStyle = layerDef.isDark ? 'rgba(8, 12, 16, 0.72)' : 'rgba(255, 255, 255, 0.9)';
         ctx.fill();
 
@@ -954,7 +985,7 @@
         ctx.fillStyle = layerDef.isDark ? '#E8ECEF' : '#1E2730';
         ctx.fill();
 
-        if (showNearbyLabels && pt.y > 135 && pt.y < viewport.height - 210) {
+        if (showNearbyLabels && pt.y > minLabelY && pt.y < maxLabelY) {
           const shortName = truncateLabel(c.name, 7);
           const box = { left: pt.x - 42, right: pt.x + 42, top: pt.y + 8, bottom: pt.y + 26 };
           const overlaps = placedBoxes.some(b =>
@@ -978,7 +1009,7 @@
       if (activeTarget && Number.isFinite(activeTarget.lat) && Number.isFinite(activeTarget.lng)) {
         const tp = projectToScreen(activeTarget.lat, activeTarget.lng);
         const pulsePhase = (nowTs % 1600) / 1600;
-        const pulseR = 13 + pulsePhase * 26;
+        const pulseR = (isPip ? 8 : 13) + pulsePhase * (isPip ? 16 : 26);
         const pulseAlpha = (1 - pulsePhase) * 0.55;
 
         ctx.save();
@@ -991,53 +1022,53 @@
 
         // 光暈背景
         ctx.beginPath();
-        ctx.arc(tp.x, tp.y, 14, 0, Math.PI * 2);
+        ctx.arc(tp.x, tp.y, isPip ? 9 : 14, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(234, 88, 40, 0.24)';
         ctx.fill();
 
-        // 四角戰術瞄準準星
-        const bracket = appState.isAnimating ? 18 : 16;
-        const arm = 6;
-        ctx.strokeStyle = '#FF9068';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        // Top-left
-        ctx.moveTo(tp.x - bracket, tp.y - bracket + arm);
-        ctx.lineTo(tp.x - bracket, tp.y - bracket);
-        ctx.lineTo(tp.x - bracket + arm, tp.y - bracket);
-        // Top-right
-        ctx.moveTo(tp.x + bracket - arm, tp.y - bracket);
-        ctx.lineTo(tp.x + bracket, tp.y - bracket);
-        ctx.lineTo(tp.x + bracket, tp.y - bracket + arm);
-        // Bottom-right
-        ctx.moveTo(tp.x + bracket, tp.y + bracket - arm);
-        ctx.lineTo(tp.x + bracket, tp.y + bracket);
-        ctx.lineTo(tp.x + bracket - arm, tp.y + bracket);
-        // Bottom-left
-        ctx.moveTo(tp.x - bracket + arm, tp.y + bracket);
-        ctx.lineTo(tp.x - bracket, tp.y + bracket);
-        ctx.lineTo(tp.x - bracket, tp.y + bracket - arm);
-        ctx.stroke();
+        if (!isPip) {
+          // 四角戰術瞄準準星
+          const bracket = appState.isAnimating ? 18 : 16;
+          const arm = 6;
+          ctx.strokeStyle = '#FF9068';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(tp.x - bracket, tp.y - bracket + arm);
+          ctx.lineTo(tp.x - bracket, tp.y - bracket);
+          ctx.lineTo(tp.x - bracket + arm, tp.y - bracket);
+          ctx.moveTo(tp.x + bracket - arm, tp.y - bracket);
+          ctx.lineTo(tp.x + bracket, tp.y - bracket);
+          ctx.lineTo(tp.x + bracket, tp.y - bracket + arm);
+          ctx.moveTo(tp.x + bracket, tp.y + bracket - arm);
+          ctx.lineTo(tp.x + bracket, tp.y + bracket);
+          ctx.lineTo(tp.x + bracket - arm, tp.y + bracket);
+          ctx.moveTo(tp.x - bracket + arm, tp.y + bracket);
+          ctx.lineTo(tp.x - bracket, tp.y + bracket);
+          ctx.lineTo(tp.x - bracket, tp.y + bracket - arm);
+          ctx.stroke();
+        }
 
         // 核心亮點
         ctx.beginPath();
-        ctx.arc(tp.x, tp.y, 7.5, 0, Math.PI * 2);
+        ctx.arc(tp.x, tp.y, isPip ? 5 : 7.5, 0, Math.PI * 2);
         ctx.fillStyle = '#EA5828';
         ctx.fill();
         ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = isPip ? 1.8 : 2.5;
         ctx.stroke();
 
-        // 浮動店名膠囊標籤
-        drawRoundedPill(
-          Math.max(70, Math.min(viewport.width - 70, tp.x)),
-          Math.max(150, tp.y - 24),
-          truncateLabel(activeTarget.name, 13),
-          'rgba(14, 19, 24, 0.90)',
-          'rgba(234, 88, 40, 0.78)',
-          '#FFFFFF',
-          12
-        );
+        // 浮動店名膠囊標籤（PiP 縮圖省略文字保持道路辨識度）
+        if (!isPip) {
+          drawRoundedPill(
+            Math.max(70, Math.min(viewport.width - 70, tp.x)),
+            Math.max(150, tp.y - 24),
+            truncateLabel(activeTarget.name, 13),
+            'rgba(14, 19, 24, 0.90)',
+            'rgba(234, 88, 40, 0.78)',
+            '#FFFFFF',
+            12
+          );
+        }
         ctx.restore();
       }
 
@@ -1059,11 +1090,11 @@
     }
 
     function resizeCanvas() {
-      const shell = canvas.parentElement;
+      const shell = mapPane || canvas.parentElement;
       const rect = shell.getBoundingClientRect();
       const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-      viewport.width = Math.max(320, rect.width);
-      viewport.height = Math.max(480, rect.height);
+      viewport.width = Math.max(80, rect.width);
+      viewport.height = Math.max(80, rect.height);
       viewport.dpr = dpr;
       canvas.width = Math.round(viewport.width * dpr);
       canvas.height = Math.round(viewport.height * dpr);
@@ -1083,6 +1114,9 @@
       while (appState.animTimers.length > 0) {
         clearTimeout(appState.animTimers.pop());
       }
+      if (svShutter) svShutter.classList.remove('is-active');
+      if (mapPane) mapPane.classList.remove('is-diving-portal');
+      if (reelOverlay) reelOverlay.classList.remove('is-active', 'is-expanding');
       appState.flightArc = null;
       appState.hopTrail = [];
       appState.scanLinks = [];
@@ -1162,6 +1196,44 @@
       openExternalMap(pick.maps_url);
     }
 
+    // ==================== 360° Google 街景同步與視角切換 ====================
+    function buildStreetViewUrl(place) {
+      const coords = getPlaceCoords(place);
+      return `https://maps.google.com/maps?layer=c&cbll=${coords.lat},${coords.lng}&cbp=12,0,0,0,0&hl=zh-TW&output=svembed`;
+    }
+
+    function updateStreetViewFrame(place) {
+      if (!place || !svFrame) return;
+      const nextUrl = buildStreetViewUrl(place);
+      if (svFrame.dataset.loadedUrl !== nextUrl) {
+        svFrame.dataset.loadedUrl = nextUrl;
+        svFrame.src = nextUrl;
+      }
+    }
+
+    function updateEnterSvFloatingBtn() {
+      if (!enterSvFloatingBtn) return;
+      const shouldShow = appState.activeView === 'map' && Boolean(appState.currentPick) && !appState.isAnimating;
+      enterSvFloatingBtn.hidden = !shouldShow;
+    }
+
+    function setViewMode(nextView, persist = true) {
+      if (!VIEW_MODES.includes(nextView)) return;
+      appState.activeView = nextView;
+      if (persist) {
+        appState.prefs.view = nextView;
+        persistPrefs();
+      }
+      if (stageViewport) {
+        stageViewport.setAttribute('data-view', nextView);
+      }
+      document.querySelectorAll('.view-pill').forEach(btn => {
+        btn.classList.toggle('is-active', btn.dataset.view === nextView);
+      });
+      updateEnterSvFloatingBtn();
+      resizeCanvas();
+    }
+
     // ==================== 頂部與底部 HUD 更新 ====================
     function applyChrome() {
       const layerDef = MAP_LAYERS[appState.prefs.layer] || MAP_LAYERS.sat;
@@ -1169,6 +1241,10 @@
 
       document.querySelectorAll('.mode-tab').forEach(btn => {
         btn.classList.toggle('is-active', btn.dataset.mode === appState.prefs.mode);
+      });
+
+      document.querySelectorAll('.view-pill').forEach(btn => {
+        btn.classList.toggle('is-active', btn.dataset.view === appState.activeView);
       });
 
       const layerBtn = document.getElementById('layerToggleBtn');
@@ -1179,9 +1255,10 @@
 
       const redrawBtn = document.getElementById('redrawBtn');
       if (redrawBtn) {
-        const modeDef = CAMERA_MODES[appState.prefs.mode] || CAMERA_MODES.hop;
+        const modeDef = CAMERA_MODES[appState.prefs.mode] || CAMERA_MODES.dive;
         redrawBtn.textContent = modeDef.btnLabel;
       }
+      updateEnterSvFloatingBtn();
     }
 
     function renderFilters() {
@@ -1230,6 +1307,7 @@
         cardEl.hidden = true;
         emptyEl.hidden = false;
         updateFooterAvailability(false);
+        updateEnterSvFloatingBtn();
         if (hudStatusEl) hudStatusEl.textContent = '目前無營業店家';
         return;
       }
@@ -1239,12 +1317,13 @@
       updateFooterAvailability(true);
 
       if (state === 'flying') {
-        const modeDef = CAMERA_MODES[appState.prefs.mode] || CAMERA_MODES.hop;
+        const modeDef = CAMERA_MODES[appState.prefs.mode] || CAMERA_MODES.dive;
         cardEl.classList.remove('is-landed');
         cardEl.classList.add('is-flying');
-        titleEl.textContent = '搜尋降落目標中…';
+        titleEl.textContent = '定位搜尋店家中…';
         subEl.textContent = modeDef.flyLabel;
         metaEl.textContent = `候選清單 ${getCandidates().length} 間`;
+        updateEnterSvFloatingBtn();
         return;
       }
 
@@ -1261,9 +1340,10 @@
       if (hudStatusEl) {
         hudStatusEl.textContent = `已鎖定 · ${truncateLabel(pick.name, 9)}`;
       }
+      updateEnterSvFloatingBtn();
     }
 
-    // ==================== 三種地圖鏡頭動畫引擎 ====================
+    // ==================== 三種「輪轉跳街景」動畫引擎 ====================
     function easeOutCubic(t) {
       return 1 - Math.pow(1 - t, 3);
     }
@@ -1305,8 +1385,15 @@
 
       const centerLat = (minLat + maxLat) * 0.5;
       const centerLng = (minLng + maxLng) * 0.5;
-      const openW = Math.max(180, viewport.width - 68);
-      const openH = Math.max(200, viewport.height - 365);
+      let openW = Math.max(180, viewport.width - 68);
+      let openH = Math.max(200, viewport.height - 365);
+      if (appState.activeView === 'split') {
+        openW = Math.max(180, viewport.width - 56);
+        openH = Math.max(140, viewport.height - 145);
+      } else if (appState.activeView === 'streetview') {
+        openW = Math.max(70, viewport.width - 20);
+        openH = Math.max(70, viewport.height - 20);
+      }
 
       const xSpanBase = Math.max(1e-6, lngToWorldX(maxLng, 0) - lngToWorldX(minLng, 0));
       const ySpanBase = Math.max(1e-6, latToWorldY(minLat, 0) - latToWorldY(maxLat, 0));
@@ -1346,6 +1433,7 @@
         },
         () => {
           appState.isAnimating = false;
+          updateEnterSvFloatingBtn();
         }
       );
     }
@@ -1374,12 +1462,16 @@
         return;
       }
 
+      // t = 0 立即背景預載目標店家的 360° Google 街景，揭曉時零等待
+      updateStreetViewFrame(pick);
+
       const targetCoords = getPlaceCoords(pick);
       const candidates = getCandidates();
 
       if (!animate) {
         appState.focusPlace = pick;
         appState.camera = { lat: targetCoords.lat, lng: targetCoords.lng, zoom: LOCK_ZOOM };
+        setViewMode(appState.activeView, false);
         showPlaceCard(pick, 'static');
         return;
       }
@@ -1389,8 +1481,9 @@
       const hudStatusEl = document.getElementById('hudStatusText');
       const mode = appState.prefs.mode;
 
-      // -------------------- A: 跳躍俯衝 --------------------
-      if (mode === 'hop') {
+      // -------------------- A: 俯衝跳街景（地圖輪轉跳點 ➔ 穿雲俯衝進 360° 街景） --------------------
+      if (mode === 'dive') {
+        setViewMode('map', false);
         const hops = buildDistinctSequence(candidates, pick, Math.min(4, Math.max(0, candidates.length - 1)));
         const waypoints = [...hops, pick];
         const hopZoom = 14.55;
@@ -1399,9 +1492,8 @@
 
         appState.hopTrail = [];
 
-        // Phase 1: 拉高至高空俯視第一站
         animateCameraSegment(
-          280,
+          260,
           t => {
             const e = easeOutCubic(t);
             appState.camera.lat = lerp(startCam.lat, firstCoords.lat, e);
@@ -1412,24 +1504,30 @@
             let hopIdx = 0;
             const runNextHop = () => {
               if (hopIdx >= hops.length) {
-                // Phase 3: 俯衝放大鎖定目標
                 const diveStart = { ...appState.camera };
                 appState.focusPlace = pick;
                 appState.hopTrail.push(targetCoords);
                 if (hudStatusEl) hudStatusEl.textContent = `俯衝鎖定 · ${truncateLabel(pick.name, 8)}`;
 
                 animateCameraSegment(
-                  660,
+                  580,
                   t => {
                     const e = easeInOutCubic(t);
                     appState.camera.lat = lerp(diveStart.lat, targetCoords.lat, e);
                     appState.camera.lng = lerp(diveStart.lng, targetCoords.lng, e);
-                    appState.camera.zoom = lerp(diveStart.zoom, LOCK_ZOOM, easeOutCubic(t));
+                    appState.camera.zoom = lerp(diveStart.zoom, 17.8, easeOutCubic(t));
                   },
                   () => {
-                    appState.isAnimating = false;
-                    appState.hopTrail = [];
-                    showPlaceCard(pick, 'landed');
+                    if (mapPane) mapPane.classList.add('is-diving-portal');
+                    const tPortal = setTimeout(() => {
+                      if (mapPane) mapPane.classList.remove('is-diving-portal');
+                      appState.hopTrail = [];
+                      appState.camera = { lat: targetCoords.lat, lng: targetCoords.lng, zoom: LOCK_ZOOM };
+                      appState.isAnimating = false;
+                      setViewMode('streetview', true);
+                      showPlaceCard(pick, 'landed');
+                    }, 260);
+                    appState.animTimers.push(tPortal);
                   }
                 );
                 return;
@@ -1443,12 +1541,12 @@
               if (hudStatusEl) hudStatusEl.textContent = `跳躍偵測 · ${truncateLabel(curPlace.name, 8)}`;
 
               animateCameraSegment(
-                290,
+                270,
                 t => {
                   const e = easeOutCubic(t);
                   appState.camera.lat = lerp(segFrom.lat, curCoords.lat, e);
                   appState.camera.lng = lerp(segFrom.lng, curCoords.lng, e);
-                  appState.camera.zoom = hopZoom + Math.sin(Math.PI * t) * 0.2;
+                  appState.camera.zoom = hopZoom + Math.sin(Math.PI * t) * 0.18;
                 },
                 () => {
                   hopIdx += 1;
@@ -1462,61 +1560,94 @@
         return;
       }
 
-      // -------------------- B: 跨區飛行 --------------------
-      if (mode === 'fly') {
-        const startCoords = prevPick ? getPlaceCoords(prevPick) : { lat: appState.camera.lat, lng: appState.camera.lng };
-        const startZoom = appState.camera.zoom;
-        const meters = haversineMeters(startCoords.lat, startCoords.lng, targetCoords.lat, targetCoords.lng);
-        const arcDip = meters < 140 ? 1.15 : Math.min(2.6, 1.55 + meters / 1600);
+      // -------------------- B: 轉輪跳街景（3D 座標滾輪定格展開直接切入 360° 街景） --------------------
+      if (mode === 'reel') {
+        setViewMode('streetview', false);
+        appState.focusPlace = pick;
 
-        appState.focusPlace = prevPick || null;
-        appState.flightArc = { from: startCoords, to: targetCoords };
-        let cardRevealed = false;
+        const camFrom = { ...appState.camera };
+        animateCameraSegment(1250, t => {
+          const e = easeOutCubic(t);
+          appState.camera.lat = lerp(camFrom.lat, targetCoords.lat, e);
+          appState.camera.lng = lerp(camFrom.lng, targetCoords.lng, e);
+          appState.camera.zoom = lerp(camFrom.zoom, LOCK_ZOOM, e);
+        });
 
-        animateCameraSegment(
-          1680,
-          t => {
-            const posE = easeInOutCubic(t);
-            appState.camera.lat = lerp(startCoords.lat, targetCoords.lat, posE);
-            appState.camera.lng = lerp(startCoords.lng, targetCoords.lng, posE);
+        const items = [prevPick || pick];
+        const pool = candidates.length > 1 ? candidates : [pick];
+        for (let i = 0; i < 15; i += 1) {
+          items.push(pool[Math.floor(Math.random() * pool.length)] || pick);
+        }
+        items.push(pick);
 
-            const baseZ = lerp(startZoom, LOCK_ZOOM, posE);
-            appState.camera.zoom = clampZoom(baseZ - arcDip * Math.sin(Math.PI * t));
+        if (reelTrack) {
+          reelTrack.style.transition = 'none';
+          reelTrack.style.transform = 'translate3d(0, 0, 0)';
+          reelTrack.classList.add('is-blur');
+          reelTrack.innerHTML = items.map(item => {
+            const c = getPlaceCoords(item);
+            return `
+              <div class="reel-item">
+                <div class="reel-item-name">${escapeHtml(item.name)}</div>
+                <div class="reel-item-meta">${escapeHtml(item.category)} · ${c.lat.toFixed(4)}°N ${c.lng.toFixed(4)}°E</div>
+              </div>
+            `;
+          }).join('');
+        }
 
-            if (t > 0.35) {
-              appState.focusPlace = pick;
+        if (reelCountTag) reelCountTag.textContent = 'SPINNING';
+        if (reelOverlay) {
+          reelOverlay.classList.remove('is-expanding');
+          reelOverlay.classList.add('is-active');
+        }
+        if (hudStatusEl) hudStatusEl.textContent = '座標轉輪高速滾動中…';
+
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (reelTrack) {
+              reelTrack.style.transition = 'transform 1.28s cubic-bezier(0.12, 0.88, 0.2, 1.05)';
+              reelTrack.style.transform = `translate3d(0, -${16 * 74}px, 0)`;
             }
-            if (hudStatusEl) {
-              const pct = Math.round(t * 100);
-              hudStatusEl.textContent = t < 0.85 ? `航線飛行中 ${pct}%` : `即將降落 · ${truncateLabel(pick.name, 8)}`;
-            }
-            if (t >= 0.9 && !cardRevealed) {
-              cardRevealed = true;
-              showPlaceCard(pick, 'landed');
-            }
-          },
-          () => {
-            appState.isAnimating = false;
-            appState.flightArc = null;
-            appState.focusPlace = pick;
-            if (!cardRevealed) showPlaceCard(pick, 'landed');
-          }
-        );
+          });
+        });
+
+        const tLock = setTimeout(() => {
+          if (reelTrack) reelTrack.classList.remove('is-blur');
+          if (reelCountTag) reelCountTag.textContent = 'LOCKED';
+          if (hudStatusEl) hudStatusEl.textContent = `已鎖定 · ${truncateLabel(pick.name, 9)}`;
+        }, 1300);
+
+        const tExpand = setTimeout(() => {
+          if (reelOverlay) reelOverlay.classList.add('is-expanding');
+        }, 1580);
+
+        const tDone = setTimeout(() => {
+          if (reelOverlay) reelOverlay.classList.remove('is-active', 'is-expanding');
+          appState.isAnimating = false;
+          setViewMode('streetview', true);
+          showPlaceCard(pick, 'landed');
+        }, 1900);
+
+        appState.animTimers.push(tLock, tExpand, tDone);
         return;
       }
 
-      // -------------------- C: 鳥瞰掃描 --------------------
+      // -------------------- C: 子母雙視角（上方雷達掃描飛躍 ＋ 下方同步切出 360° 街景） --------------------
+      setViewMode('split', true);
+      if (svShutter) svShutter.classList.add('is-active');
+      if (shutterStoreName) shutterStoreName.textContent = '啟動全區雷達掃描';
+      if (shutterCoord) shutterCoord.textContent = `${appState.camera.lat.toFixed(4)}°N · ${appState.camera.lng.toFixed(4)}°E`;
+
       const overview = computeOverviewCamera(candidates);
       const startCam = { ...appState.camera };
       const scanTargets = buildDistinctSequence(candidates, pick, Math.min(8, Math.max(0, candidates.length - 1)));
       const scanSequence = [...scanTargets, pick];
 
       appState.scanLinks = [];
-      if (hudStatusEl) hudStatusEl.textContent = `全區掃描啟動 · 候選 ${candidates.length} 間`;
+      if (hudStatusEl) hudStatusEl.textContent = `雙視角掃描 · 候選 ${candidates.length} 間`;
 
-      // Phase 1: 退到全區鳥瞰視角
       animateCameraSegment(
-        340,
+        320,
         t => {
           const e = easeOutCubic(t);
           appState.camera.lat = lerp(startCam.lat, overview.lat, e);
@@ -1524,22 +1655,23 @@
           appState.camera.zoom = lerp(startCam.zoom, overview.zoom, e);
         },
         () => {
-          // Phase 2: 鳥瞰視角下，雷達光標由快而慢在候選點間跳躍掃描
           let lastIdx = -1;
           animateCameraSegment(
-            1220,
+            1180,
             t => {
-              // 減速節奏：先快掃再放慢定格
               const slowed = 1 - Math.pow(1 - t, 1.85);
               const idx = Math.min(scanSequence.length - 1, Math.floor(slowed * scanSequence.length));
               if (idx !== lastIdx) {
                 lastIdx = idx;
                 const spot = scanSequence[idx];
+                const sc = getPlaceCoords(spot);
                 appState.focusPlace = spot;
                 if (Number.isFinite(spot.lat) && Number.isFinite(spot.lng)) {
                   appState.scanLinks.push({ lat: spot.lat, lng: spot.lng });
                   if (appState.scanLinks.length > 5) appState.scanLinks.shift();
                 }
+                if (shutterStoreName) shutterStoreName.textContent = spot.name;
+                if (shutterCoord) shutterCoord.textContent = `${sc.lat.toFixed(4)}°N · ${sc.lng.toFixed(4)}°E`;
                 if (hudStatusEl) {
                   hudStatusEl.textContent = idx === scanSequence.length - 1
                     ? `掃描鎖定 · ${truncateLabel(spot.name, 8)}`
@@ -1548,11 +1680,13 @@
               }
             },
             () => {
-              // Phase 3: 從鳥瞰垂直俯衝放大鎖定中獎店家
               const zoomFrom = { ...appState.camera };
               appState.focusPlace = pick;
+              if (shutterStoreName) shutterStoreName.textContent = pick.name;
+              if (shutterCoord) shutterCoord.textContent = `${targetCoords.lat.toFixed(4)}°N · ${targetCoords.lng.toFixed(4)}°E`;
+
               animateCameraSegment(
-                620,
+                560,
                 t => {
                   const e = easeInOutCubic(t);
                   appState.camera.lat = lerp(zoomFrom.lat, targetCoords.lat, e);
@@ -1562,6 +1696,7 @@
                 () => {
                   appState.isAnimating = false;
                   appState.scanLinks = [];
+                  if (svShutter) svShutter.classList.remove('is-active');
                   showPlaceCard(pick, 'landed');
                 }
               );
@@ -1586,11 +1721,17 @@
       if (appState.isAnimating) clearAnimations();
       appState.prefs.mode = nextMode;
       persistPrefs();
+      if (nextMode === 'split') {
+        setViewMode('split', true);
+      } else if (appState.activeView === 'split') {
+        setViewMode('streetview', true);
+      }
       applyChrome();
       if (!appState.currentPick) {
         drawNextCandidate(false);
       }
       if (appState.currentPick) {
+        updateStreetViewFrame(appState.currentPick);
         const coords = getPlaceCoords(appState.currentPick);
         appState.focusPlace = appState.currentPick;
         appState.camera = { lat: coords.lat, lng: coords.lng, zoom: LOCK_ZOOM };
@@ -1641,7 +1782,7 @@
       });
 
       canvas.addEventListener('pointermove', e => {
-        if (!pointers.has(e.pointerId) || appState.isAnimating) return;
+        if (!pointers.has(e.pointerId) || appState.isAnimating || appState.activeView === 'streetview') return;
         pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
         if (pointers.size === 2 && pinchStartDist > 10) {
@@ -1683,7 +1824,12 @@
         }
 
         if (wasSingleTap) {
-          // 命中檢索：若點到某個候選餐廳圓點，鏡頭飛往該店並顯示資訊卡
+          if (appState.activeView === 'streetview') {
+            setViewMode('map', true);
+            return;
+          }
+
+          // 命中檢索：若點到某個候選餐廳圓點，鏡頭飛往該店並同步街景與資訊卡
           const candidates = getCandidates();
           let bestPlace = null;
           let bestDist = 24;
@@ -1699,6 +1845,7 @@
           if (bestPlace) {
             appState.currentPick = bestPlace;
             appState.focusPlace = bestPlace;
+            updateStreetViewFrame(bestPlace);
             showPlaceCard(bestPlace, 'landed');
             flyCameraTo({
               lat: bestPlace.lat,
@@ -1778,6 +1925,21 @@
       btn.onclick = () => switchMode(btn.dataset.mode);
     });
 
+    document.querySelectorAll('.view-pill').forEach(btn => {
+      btn.onclick = () => {
+        if (appState.isAnimating) return;
+        setViewMode(btn.dataset.view, true);
+      };
+    });
+
+    if (enterSvFloatingBtn) {
+      enterSvFloatingBtn.onclick = () => {
+        if (appState.isAnimating || !appState.currentPick) return;
+        updateStreetViewFrame(appState.currentPick);
+        setViewMode('streetview', true);
+      };
+    }
+
     document.getElementById('layerToggleBtn').onclick = cycleMapLayer;
 
     document.getElementById('openToggleBtn').onclick = () => {
@@ -1820,9 +1982,9 @@
     }
 
     window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
     bindCanvasGestures();
     preloadCoreTiles(appState.prefs.layer);
+    setViewMode(appState.activeView, false);
     applyChrome();
     renderFilters();
 
