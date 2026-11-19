@@ -182,13 +182,15 @@
       width: 100%;
       height: 100%;
       opacity: 0;
+      visibility: hidden;
       pointer-events: none;
       z-index: 1;
-      transition: opacity 0.26s ease, transform 0.32s var(--ease-spring);
+      transition: opacity 0.26s ease, transform 0.32s var(--ease-spring), visibility 0.26s;
     }
 
     body[data-screen="home"] #homeScreen {
       opacity: 1;
+      visibility: visible;
       transform: translate3d(0, 0, 0) scale(1);
       pointer-events: auto;
       z-index: 2;
@@ -208,6 +210,7 @@
 
     body[data-screen="map"] #mapScreen {
       opacity: 1;
+      visibility: visible;
       transform: scale(1);
       pointer-events: auto;
       z-index: 2;
@@ -219,6 +222,7 @@
 
     body[data-screen="manage"] #manageScreen {
       opacity: 1;
+      visibility: visible;
       transform: translate3d(0, 0, 0);
       pointer-events: auto;
       z-index: 2;
@@ -1497,19 +1501,23 @@
       inset: 0;
       z-index: 20;
       background: rgba(0, 0, 0, 0.55);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
       display: flex;
       align-items: flex-end;
       justify-content: center;
       opacity: 0;
+      visibility: hidden;
       pointer-events: none;
-      transition: opacity 0.22s ease;
+      transition: opacity 0.22s ease, visibility 0.22s;
     }
 
     .modal-backdrop.is-open {
       opacity: 1;
+      visibility: visible;
       pointer-events: auto;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
     }
 
     .modal-sheet {
@@ -1819,6 +1827,24 @@
     .app-toast.is-show {
       opacity: 1;
       transform: translate(-50%, 0);
+    }
+
+    /* ==================== iOS / iPhone 頂部狀態列防霧安全區退讓 ====================
+       iOS 18+ / 26 在螢幕頂端 ~76px 會強制疊加系統狀態列毛玻璃（Progressive Blur）。
+       將頂部純色安全區加高至 80px+，讓上方模糊帶只作用於純色背景（純色模糊後仍為 100% 純色），
+       使「今天吃什麼」標題與按鈕完全落在模糊帶下方，徹底消除文字霧感。 */
+    @supports (-webkit-touch-callout: none) {
+      .home-header {
+        padding-top: max(calc(env(safe-area-inset-top, 48px) + 28px), 80px);
+      }
+
+      .hud-top {
+        padding-top: max(calc(env(safe-area-inset-top, 48px) + 26px), 78px);
+      }
+
+      .manage-header {
+        padding-top: max(calc(env(safe-area-inset-top, 48px) + 26px), 78px);
+      }
     }
   </style>
 </head>
