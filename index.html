@@ -7,7 +7,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="今天吃什麼" />
-  <meta name="theme-color" content="#0B0F14" />
+  <meta name="theme-color" content="#0F1115" />
   <title>今天吃什麼 · Meal Picker</title>
   <link rel="manifest" href="./manifest.json" />
   <link rel="apple-touch-icon" sizes="180x180" href="./assets/icon-180.png" />
@@ -19,26 +19,98 @@
       padding: 0;
     }
 
-    :root {
-      --bg-outer: #06090D;
-      --bg-home: #0B0F14;
-      --surface-card: #131A23;
-      --surface-raised: #1A232E;
-      --map-fallback: #10171D;
-      --glass-bg: rgba(14, 19, 24, 0.82);
-      --glass-strong: rgba(14, 19, 24, 0.92);
-      --line-subtle: rgba(255, 255, 255, 0.09);
-      --glass-border: rgba(255, 255, 255, 0.14);
-      --ink-main: #F4F6F8;
-      --ink-sub: #C6D0DA;
-      --ink-muted: #8A97A6;
+    /* ==========================================================================
+       預設樣式 A：Linear / Things Dark 霧面石墨深色（去霓虹、去漸層、乾淨實色）
+       ========================================================================== */
+    :root,
+    body[data-theme="graphite"] {
+      --bg-outer: #090A0D;
+      --bg-home: #0F1115;
+      --surface-card: #161920;
+      --surface-raised: #1D212A;
+      --surface-subtle: rgba(255, 255, 255, 0.04);
+      --surface-active: rgba(234, 88, 40, 0.12);
+      --map-fallback: #10141A;
+
+      --glass-bg: rgba(18, 21, 27, 0.88);
+      --glass-strong: rgba(18, 21, 27, 0.95);
+      --line-subtle: #232730;
+      --line-card: #22262F;
+      --glass-border: rgba(255, 255, 255, 0.10);
+
+      --ink-main: #F3F4F6;
+      --ink-sub: #C4C9D4;
+      --ink-muted: #828A99;
+
       --accent: #EA5828;
-      --accent-bright: #F66E3E;
-      --accent-dark: #B33B14;
+      --accent-dark: #B83D15;
       --accent-ink: #FFFFFF;
-      --emerald: #34D399;
+      --accent-tag-bg: rgba(234, 88, 40, 0.12);
+      --accent-tag-ink: #F28B66;
+
+      --emerald: #10B981;
+      --emerald-tag-bg: rgba(16, 185, 129, 0.12);
+      --emerald-tag-ink: #34D399;
+
+      --matrix-empty: #1C2029;
+      --matrix-open: #283240;
+      --matrix-open-dot: #10B981;
+
+      --tab-track: #111318;
+      --tab-active-bg: #F3F4F6;
+      --tab-active-ink: #0F1115;
+
+      --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.24);
+      --shell-border: rgba(255, 255, 255, 0.08);
+      --shell-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+
       --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
-      --ease-spring: cubic-bezier(0.25, 0.8, 0.25, 1);
+      --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* ==========================================================================
+       樣式 C：Airbnb / Muji 溫潤暖白日常風（Warm Paper & Terracotta）
+       ========================================================================== */
+    body[data-theme="airbnb"] {
+      --bg-outer: #E8E4DC;
+      --bg-home: #F7F5F0;
+      --surface-card: #FFFFFF;
+      --surface-raised: #F3F0E8;
+      --surface-subtle: #F2EFE9;
+      --surface-active: rgba(217, 78, 40, 0.08);
+      --map-fallback: #E6E2D8;
+
+      --glass-bg: rgba(255, 255, 255, 0.90);
+      --glass-strong: rgba(255, 255, 255, 0.96);
+      --line-subtle: #E6E1D6;
+      --line-card: #E5E0D5;
+      --glass-border: #DDD7CB;
+
+      --ink-main: #22201D;
+      --ink-sub: #524E47;
+      --ink-muted: #857F75;
+
+      --accent: #D94E28;
+      --accent-dark: #AD3919;
+      --accent-ink: #FFFFFF;
+      --accent-tag-bg: #FBECE7;
+      --accent-tag-ink: #C03F1B;
+
+      --emerald: #2E8B57;
+      --emerald-tag-bg: #E8F4ED;
+      --emerald-tag-ink: #227044;
+
+      --matrix-empty: #F0ECE3;
+      --matrix-open: #E3EFE8;
+      --matrix-open-dot: #2E8B57;
+
+      --tab-track: #EFECE4;
+      --tab-active-bg: #22201D;
+      --tab-active-ink: #FFFFFF;
+
+      --card-shadow: 0 2px 8px rgba(34, 32, 29, 0.03);
+      --shell-border: #DAD4C8;
+      --shell-shadow: 0 20px 50px rgba(34, 32, 29, 0.10);
     }
 
     body[data-layer="street"] {
@@ -57,8 +129,10 @@
       font-family: var(--font-sans);
       font-variant-numeric: tabular-nums;
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
       overflow: hidden;
       overscroll-behavior: none;
+      transition: background-color 0.2s ease, color 0.2s ease;
     }
 
     button {
@@ -77,6 +151,7 @@
       cursor: not-allowed;
     }
 
+    /* ==================== 外框（簡潔乾淨容器，無假手機厚框與霓虹背光） ==================== */
     .app-shell {
       position: relative;
       width: 100%;
@@ -85,15 +160,16 @@
       margin: 0 auto;
       background-color: var(--bg-home);
       overflow: hidden;
+      transition: background-color 0.2s ease;
     }
 
     @media (min-width: 500px) {
       .app-shell {
-        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 28px 80px rgba(0, 0, 0, 0.72);
+        box-shadow: 0 0 0 1px var(--shell-border), var(--shell-shadow);
       }
     }
 
-    /* ==================== 三畫面切換容器（主頁 / 衛星抽籤 / 名單管理） ==================== */
+    /* ==================== 三畫面切換容器 ==================== */
     .screen {
       position: absolute;
       inset: 0;
@@ -102,7 +178,7 @@
       opacity: 0;
       pointer-events: none;
       z-index: 1;
-      transition: opacity 0.28s ease, transform 0.34s var(--ease-spring);
+      transition: opacity 0.26s ease, transform 0.32s var(--ease-spring);
     }
 
     body[data-screen="home"] #homeScreen {
@@ -113,15 +189,15 @@
     }
 
     body[data-screen="home"] #mapScreen {
-      transform: scale(1.04);
+      transform: scale(1.03);
     }
 
     body[data-screen="home"] #manageScreen {
-      transform: translate3d(32px, 0, 0);
+      transform: translate3d(28px, 0, 0);
     }
 
     body[data-screen="map"] #homeScreen {
-      transform: scale(0.95);
+      transform: scale(0.96);
     }
 
     body[data-screen="map"] #mapScreen {
@@ -142,14 +218,11 @@
       z-index: 2;
     }
 
-    /* ==================== PAGE 1：Bento 趣味互動主畫面 ==================== */
+    /* ==================== PAGE 1：Bento 主畫面（乾淨、簡潔、零 AI 霓虹感） ==================== */
     .home-screen {
       display: flex;
       flex-direction: column;
-      background:
-        radial-gradient(circle at 82% 6%, rgba(234, 88, 40, 0.14) 0%, rgba(11, 15, 20, 0) 44%),
-        radial-gradient(circle at 14% 78%, rgba(56, 189, 248, 0.08) 0%, rgba(11, 15, 20, 0) 45%),
-        var(--bg-home);
+      background: var(--bg-home);
     }
 
     .home-scroll {
@@ -160,7 +233,7 @@
       padding:
         calc(env(safe-area-inset-top, 8px) + 10px)
         14px
-        8px;
+        14px;
       display: flex;
       flex-direction: column;
       gap: 9px;
@@ -176,7 +249,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-      padding: 2px 4px;
+      padding: 2px 2px 4px;
     }
 
     .home-title-group {
@@ -185,89 +258,111 @@
       gap: 2px;
     }
 
+    /* 純色乾淨字體，去除漸層字與英文標語 */
     .home-title {
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: -0.025em;
+      font-size: 21px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
       color: var(--ink-main);
+      line-height: 1.2;
     }
 
     .home-subtitle {
       font-size: 12px;
-      font-weight: 500;
+      font-weight: 400;
       color: var(--ink-muted);
+    }
+
+    .home-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-shrink: 0;
     }
 
     .home-open-switch {
       flex-shrink: 0;
       display: inline-flex;
       align-items: center;
-      gap: 7px;
-      padding: 7px 12px;
+      gap: 6px;
+      height: 34px;
+      padding: 0 12px;
       border-radius: 999px;
-      background: var(--surface-raised);
-      border: 1px solid var(--glass-border);
+      background: var(--surface-card);
+      border: 1px solid var(--line-subtle);
+      box-shadow: var(--card-shadow);
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--ink-sub);
-      transition: transform 0.25s var(--ease-spring), background-color 0.2s ease, border-color 0.2s ease;
+      transition: transform 0.2s var(--ease-spring), background-color 0.2s ease, border-color 0.2s ease;
     }
 
     .home-open-switch:active {
-      transform: scale(0.95);
+      transform: scale(0.96);
     }
 
     .home-open-switch .dot {
-      width: 7px;
-      height: 7px;
+      width: 6.5px;
+      height: 6.5px;
       border-radius: 999px;
       background: var(--ink-muted);
-      transition: background-color 0.2s ease, box-shadow 0.2s ease;
+      transition: background-color 0.2s ease;
     }
 
     .home-open-switch.is-active {
-      background: rgba(234, 88, 40, 0.16);
-      border-color: rgba(234, 88, 40, 0.62);
-      color: #FFD7C7;
+      color: var(--ink-main);
+      font-weight: 600;
     }
 
     .home-open-switch.is-active .dot {
       background: var(--emerald);
-      box-shadow: 0 0 8px rgba(52, 211, 153, 0.8);
     }
 
-    /* --- Bento Box 網格系統 --- */
+    .manage-icon-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      background: var(--surface-card);
+      border: 1px solid var(--line-subtle);
+      box-shadow: var(--card-shadow);
+      color: var(--ink-main);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s var(--ease-spring), background-color 0.2s ease;
+    }
+
+    .manage-icon-btn:active {
+      transform: scale(0.94);
+    }
+
+    /* --- Bento 網格與乾淨卡片 --- */
     .bento-grid {
       display: grid;
-      grid-template-columns: 1fr 1.12fr;
+      grid-template-columns: 0.96fr 1.14fr;
       gap: 9px;
     }
 
     .bento-card {
       position: relative;
-      background: linear-gradient(160deg, rgba(24, 33, 44, 0.92) 0%, rgba(16, 22, 30, 0.96) 100%);
-      border: 1px solid var(--line-subtle);
-      border-radius: 19px;
+      background: var(--surface-card);
+      border: 1px solid var(--line-card);
+      box-shadow: var(--card-shadow);
+      border-radius: 16px;
       padding: 11px 12px;
       display: flex;
       flex-direction: column;
       gap: 8px;
       overflow: hidden;
-      transition: transform 0.35s var(--ease-spring), border-color 0.25s ease, box-shadow 0.35s var(--ease-spring);
+      transition: transform 0.24s var(--ease-spring), border-color 0.2s ease;
     }
 
     .bento-card.is-tappable {
       cursor: pointer;
     }
 
-    .bento-card.is-tappable:hover {
-      transform: translateY(-2px);
-      border-color: rgba(255, 255, 255, 0.18);
-      box-shadow: 0 12px 26px rgba(0, 0, 0, 0.36);
-    }
-
     .bento-card.is-tappable:active {
-      transform: scale(0.975);
+      transform: scale(0.98);
     }
 
     .span-2 {
@@ -282,53 +377,56 @@
     }
 
     .kicker-title {
-      font-size: 12.5px;
-      font-weight: 700;
-      color: var(--ink-main);
-      letter-spacing: -0.01em;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink-muted);
     }
 
     .kicker-pill {
       font-size: 11px;
-      font-weight: 600;
-      color: #FF946C;
+      font-weight: 500;
+      color: var(--accent-tag-ink);
       white-space: nowrap;
     }
 
-    /* --- Bento 左卡：即時營業 SVG 進度環 --- */
+    /* --- Bento 左卡：即時營業進度環（去除霓虹發光，乾淨單色） --- */
     .ring-card {
       align-items: center;
       justify-content: space-between;
       text-align: center;
-      gap: 6px;
+      gap: 5px;
     }
 
     .ring-card .card-kicker {
       width: 100%;
     }
 
+    .ring-card .kicker-pill {
+      color: var(--emerald-tag-ink);
+      font-weight: 600;
+    }
+
     .ring-wrap {
       position: relative;
-      width: 74px;
-      height: 74px;
+      width: 72px;
+      height: 72px;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0;
     }
 
     .progress-ring {
       transform: rotate(-90deg);
-      width: 74px;
-      height: 74px;
+      width: 72px;
+      height: 72px;
     }
 
     .progress-ring__track {
-      stroke: rgba(255, 255, 255, 0.08);
+      stroke: var(--surface-raised);
     }
 
     .progress-ring__circle {
-      transition: stroke-dashoffset 0.75s var(--ease-spring), stroke 0.3s ease;
+      transition: stroke-dashoffset 0.65s var(--ease-spring), stroke 0.25s ease;
     }
 
     .ring-center {
@@ -340,57 +438,68 @@
     }
 
     .ring-num {
-      font-size: 22px;
-      font-weight: 800;
+      font-size: 21px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
       color: var(--ink-main);
     }
 
     .ring-sub {
-      font-size: 10.5px;
-      font-weight: 600;
+      font-size: 10px;
+      font-weight: 400;
       color: var(--ink-muted);
       margin-top: 2px;
     }
 
     .ring-foot {
       font-size: 11px;
+      font-weight: 400;
       color: var(--ink-muted);
     }
 
-    /* --- Bento 右卡：互動「隨機靈感盲盒 / 近期最愛」趣味卡 --- */
+    /* --- Bento 右卡：今日靈感盲盒（去除放射炫光，簡潔排版） --- */
     .teaser-card {
       justify-content: space-between;
-      background:
-        radial-gradient(circle at 100% 0%, rgba(234, 88, 40, 0.18) 0%, rgba(16, 22, 30, 0) 62%),
-        linear-gradient(160deg, rgba(24, 33, 44, 0.94) 0%, rgba(16, 22, 30, 0.98) 100%);
+      text-align: left;
     }
 
     .teaser-body {
       display: flex;
       flex-direction: column;
       gap: 4px;
-      transition: opacity 0.2s ease, transform 0.26s var(--ease-spring);
+      transition: opacity 0.18s ease, transform 0.22s var(--ease-spring);
     }
 
     .teaser-body.is-flipping {
       opacity: 0;
-      transform: translateY(6px) scale(0.96);
+      transform: translateY(4px);
+    }
+
+    .teaser-badge-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
 
     .teaser-badge {
-      align-self: flex-start;
-      padding: 3px 8px;
-      border-radius: 999px;
+      padding: 2px 7px;
+      border-radius: 6px;
       font-size: 10.5px;
-      font-weight: 700;
-      background: rgba(255, 255, 255, 0.09);
-      color: #FFD5C4;
+      font-weight: 500;
+      background: var(--surface-raised);
+      color: var(--ink-sub);
+    }
+
+    .teaser-rating-pill {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--ink-muted);
     }
 
     .teaser-name {
-      font-size: 16px;
-      font-weight: 800;
-      line-height: 1.25;
+      font-size: 15.5px;
+      font-weight: 600;
+      line-height: 1.28;
       color: var(--ink-main);
       display: -webkit-box;
       -webkit-line-clamp: 2;
@@ -405,52 +514,43 @@
     }
 
     .teaser-hint {
-      font-size: 10.5px;
-      font-weight: 600;
-      color: #FF946C;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--ink-muted);
     }
 
-    /* --- Bento 中卡：圖示化 3×2 品項卡片牆 --- */
+    /* --- Bento 中卡：3×2 品項卡片牆 --- */
     .cat-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
+      gap: 7px;
     }
 
     .cat-card {
       position: relative;
-      padding: 8px 9px 8px;
-      border-radius: 14px;
+      padding: 8px 9px 7px;
+      border-radius: 12px;
       background: var(--surface-raised);
-      border: 1px solid rgba(255, 255, 255, 0.07);
+      border: 1px solid transparent;
       display: flex;
       flex-direction: column;
       align-items: flex-start;
       gap: 5px;
       text-align: left;
-      transition: transform 0.28s var(--ease-spring), border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.28s var(--ease-spring);
-    }
-
-    .cat-card:hover {
-      transform: translateY(-2px);
-      border-color: rgba(255, 255, 255, 0.16);
+      transition: transform 0.2s var(--ease-spring), border-color 0.18s ease, background-color 0.18s ease;
     }
 
     .cat-card:active {
-      transform: scale(0.95);
+      transform: scale(0.96);
     }
 
     .cat-card.is-active {
-      background: rgba(234, 88, 40, 0.17);
-      border-color: rgba(234, 88, 40, 0.88);
-      box-shadow: 0 8px 18px rgba(234, 88, 40, 0.18), 0 0 0 1px rgba(234, 88, 40, 0.28) inset;
+      background: var(--surface-active);
+      border-color: var(--accent);
     }
 
     .cat-card.is-empty-open {
-      opacity: 0.46;
+      opacity: 0.42;
     }
 
     .cat-icon-row {
@@ -461,41 +561,38 @@
     }
 
     .cat-icon-wrap {
-      width: 26px;
-      height: 26px;
-      border-radius: 9px;
+      width: 24px;
+      height: 24px;
+      border-radius: 7px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      background: rgba(255, 255, 255, 0.06);
-    }
-
-    .cat-card.is-active .cat-icon-wrap {
-      background: rgba(234, 88, 40, 0.24);
+      background: var(--surface-subtle);
     }
 
     .cat-count-badge {
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 500;
       color: var(--ink-muted);
     }
 
     .cat-card.is-active .cat-count-badge {
-      color: #FFD5C4;
+      color: var(--ink-main);
+      font-weight: 600;
     }
 
     .cat-card-name {
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 600;
       color: var(--ink-main);
       white-space: nowrap;
     }
 
     .cat-mini-track {
       width: 100%;
-      height: 3.5px;
+      height: 3px;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.08);
+      background: rgba(128, 128, 128, 0.16);
       overflow: hidden;
     }
 
@@ -505,28 +602,28 @@
       transition: width 0.35s var(--ease-spring);
     }
 
-    /* --- Bento 下卡：49 格探索星圖 ⇄ 分類統計 雙切卡 --- */
+    /* --- Bento 下卡：探索星圖 ⇄ 飲食統計 --- */
     .sub-tabs {
       display: inline-flex;
-      gap: 3px;
+      gap: 2px;
       padding: 2px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      background: var(--tab-track);
     }
 
     .sub-tab {
-      padding: 4px 9px;
-      border-radius: 999px;
+      padding: 3.5px 9px;
+      border-radius: 6px;
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--ink-muted);
-      transition: background-color 0.2s ease, color 0.2s ease;
+      transition: background-color 0.18s ease, color 0.18s ease;
     }
 
     .sub-tab.is-active {
-      background: var(--ink-main);
-      color: #0E1318;
-      font-weight: 700;
+      background: var(--tab-active-bg);
+      color: var(--tab-active-ink);
+      font-weight: 600;
     }
 
     .matrix-10 {
@@ -536,32 +633,36 @@
     }
 
     .matrix-cell {
-      height: 22px;
-      border-radius: 6px;
-      background: #1B232E;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      transition: transform 0.2s var(--ease-spring), background-color 0.2s ease, border-color 0.2s ease;
-    }
-
-    .matrix-cell:hover {
-      transform: scale(1.16);
-      border-color: rgba(255, 255, 255, 0.4);
+      position: relative;
+      height: 18px;
+      border-radius: 5px;
+      background: var(--matrix-empty);
+      border: 1px solid transparent;
+      transition: transform 0.18s var(--ease-spring), background-color 0.18s ease;
     }
 
     .matrix-cell.is-open-new {
-      background: #2E3D4F;
-      border-color: rgba(255, 255, 255, 0.16);
+      background: var(--matrix-open);
+    }
+
+    .matrix-cell.is-open-new::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      margin: auto;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--matrix-open-dot);
     }
 
     .matrix-cell.is-visited {
       background: var(--accent);
-      border-color: #FFA07A;
-      box-shadow: 0 0 10px rgba(234, 88, 40, 0.42);
     }
 
     .matrix-cell.is-selected {
-      transform: scale(1.22);
-      border-color: #FFFFFF;
+      transform: scale(1.18);
+      border-color: var(--ink-main);
       z-index: 2;
     }
 
@@ -570,11 +671,11 @@
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      font-size: 11.5px;
-      color: var(--ink-sub);
-      padding: 6px 10px;
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.04);
+      font-size: 11px;
+      color: var(--ink-muted);
+      padding: 6px 9px;
+      border-radius: 9px;
+      background: var(--surface-raised);
     }
 
     .matrix-tip-text {
@@ -586,8 +687,8 @@
     .matrix-count-pill {
       flex-shrink: 0;
       font-size: 11px;
-      font-weight: 700;
-      color: #FF946C;
+      font-weight: 600;
+      color: var(--ink-sub);
     }
 
     .stats-pane[hidden],
@@ -606,7 +707,7 @@
       grid-template-columns: 58px 1fr 38px;
       align-items: center;
       gap: 8px;
-      font-size: 12px;
+      font-size: 11.5px;
     }
 
     .pref-label {
@@ -615,9 +716,9 @@
     }
 
     .pref-track {
-      height: 7px;
+      height: 6px;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.07);
+      background: var(--surface-raised);
       overflow: hidden;
     }
 
@@ -628,8 +729,8 @@
     }
 
     .pref-val {
-      font-size: 11.5px;
-      font-weight: 600;
+      font-size: 11px;
+      font-weight: 500;
       color: var(--ink-muted);
       text-align: right;
     }
@@ -648,12 +749,12 @@
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      font-size: 12px;
+      font-size: 11.5px;
     }
 
     .recent-name {
       color: var(--ink-main);
-      font-weight: 600;
+      font-weight: 500;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -666,22 +767,23 @@
     }
 
     .history-empty {
-      font-size: 12px;
+      font-size: 11.5px;
       line-height: 1.5;
       color: var(--ink-muted);
       padding: 6px 2px;
     }
 
-    /* ==================== 底部動態圓盤啟動器（Kinetic Radar Dial） ==================== */
+    /* ==================== 底部圓盤啟動器（乾淨克制、去除斜向流光與刺眼光暈） ==================== */
     .dial-dock {
       flex-shrink: 0;
       position: relative;
-      padding: 6px 16px calc(env(safe-area-inset-bottom, 10px) + 12px);
+      padding: 4px 18px calc(env(safe-area-inset-bottom, 8px) + 10px);
       display: grid;
       grid-template-columns: 1fr auto 1fr;
       align-items: center;
       gap: 10px;
-      background: linear-gradient(0deg, var(--bg-home) 74%, rgba(11, 15, 20, 0) 100%);
+      background: var(--bg-home);
+      border-top: 1px solid var(--line-subtle);
     }
 
     .dial-side {
@@ -702,56 +804,47 @@
 
     .dial-side-val {
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 600;
       color: var(--ink-main);
       white-space: nowrap;
     }
 
     .dial-launcher {
       position: relative;
-      width: 114px;
-      height: 114px;
+      width: 96px;
+      height: 96px;
+      margin-top: -12px;
       display: flex;
       align-items: center;
       justify-content: center;
       border-radius: 999px;
-      transition: transform 0.28s var(--ease-spring);
-    }
-
-    .dial-launcher:hover {
-      transform: scale(1.04);
+      transition: transform 0.24s var(--ease-spring);
     }
 
     .dial-launcher:active {
-      transform: scale(0.92);
+      transform: scale(0.94);
     }
 
     .dial-pulse-wave {
       position: absolute;
       inset: 8px;
       border-radius: 999px;
-      border: 1.5px solid rgba(234, 88, 40, 0.55);
-      animation: dialWave 2.6s cubic-bezier(0.2, 0.65, 0.3, 1) infinite;
+      border: 1px solid var(--line-subtle);
       pointer-events: none;
     }
 
     .dial-pulse-wave.is-delay {
-      animation-delay: 1.3s;
-    }
-
-    @keyframes dialWave {
-      0% { transform: scale(0.86); opacity: 0.7; }
-      100% { transform: scale(1.36); opacity: 0; }
+      display: none;
     }
 
     .dial-compass-svg {
       position: absolute;
       inset: 0;
-      width: 114px;
-      height: 114px;
-      animation: orbitSpin 16s linear infinite;
+      width: 96px;
+      height: 96px;
+      animation: orbitSpin 22s linear infinite;
       pointer-events: none;
-      transition: transform 0.34s cubic-bezier(0.2, 0.9, 0.25, 1);
+      opacity: 0.65;
     }
 
     @keyframes orbitSpin {
@@ -760,53 +853,46 @@
     }
 
     .dial-launcher.is-launching .dial-compass-svg {
-      animation: launchBurst 0.34s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      animation: launchBurst 0.32s var(--ease-spring) forwards;
     }
 
     @keyframes launchBurst {
       0% { transform: rotate(0deg) scale(1); }
-      100% { transform: rotate(300deg) scale(1.22); }
+      100% { transform: rotate(240deg) scale(1.12); }
     }
 
     .dial-core {
       position: relative;
       z-index: 2;
-      width: 84px;
-      height: 84px;
+      width: 74px;
+      height: 74px;
       border-radius: 999px;
-      background: radial-gradient(circle at 32% 28%, #FF8252 0%, #EA5828 54%, #BA3D15 100%);
-      box-shadow:
-        0 10px 26px rgba(234, 88, 40, 0.45),
-        0 0 0 2px rgba(255, 255, 255, 0.16) inset,
-        0 -4px 10px rgba(0, 0, 0, 0.28) inset;
+      background: var(--accent);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 2px;
-      color: #FFFFFF;
-      transition: filter 0.2s ease;
+      color: var(--accent-ink);
     }
 
     .dial-launcher.is-warn .dial-core {
-      background: radial-gradient(circle at 32% 28%, #3B4A5D 0%, #24303E 100%);
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45), 0 0 0 1.5px rgba(255, 255, 255, 0.15) inset;
+      background: var(--surface-raised);
+      color: var(--ink-main);
+      border: 1px solid var(--line-subtle);
     }
 
     .dial-core-main {
-      font-size: 14px;
-      font-weight: 800;
-      letter-spacing: 0.02em;
+      font-size: 13px;
+      font-weight: 600;
       line-height: 1.1;
     }
 
     .dial-core-sub {
       font-size: 10.5px;
-      font-weight: 700;
-      opacity: 0.92;
-      padding: 1px 6px;
-      border-radius: 999px;
-      background: rgba(0, 0, 0, 0.22);
+      font-weight: 500;
+      opacity: 0.9;
     }
 
     /* ==================== PAGE 2：全螢幕俯視衛星輪轉畫面 ==================== */
@@ -833,8 +919,8 @@
       top: 0;
       left: 0;
       right: 0;
-      height: 118px;
-      background: linear-gradient(180deg, rgba(8, 12, 16, 0.66) 0%, rgba(8, 12, 16, 0) 100%);
+      height: 110px;
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0) 100%);
       pointer-events: none;
       z-index: 2;
     }
@@ -844,8 +930,8 @@
       bottom: 0;
       left: 0;
       right: 0;
-      height: 224px;
-      background: linear-gradient(0deg, rgba(8, 12, 16, 0.74) 0%, rgba(8, 12, 16, 0) 100%);
+      height: 220px;
+      background: linear-gradient(0deg, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0) 100%);
       pointer-events: none;
       z-index: 2;
     }
@@ -874,26 +960,22 @@
       gap: 8px;
     }
 
-    .back-btn {
+    .back-btn,
+    .layer-toggle {
       flex-shrink: 0;
       height: 36px;
-      padding: 0 12px;
+      padding: 0 13px;
       border-radius: 999px;
       background: var(--glass-bg);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--glass-border);
       font-size: 12.5px;
-      font-weight: 700;
+      font-weight: 600;
       color: var(--ink-main);
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      transition: transform 0.14s ease;
-    }
-
-    .back-btn:active {
-      transform: scale(0.95);
     }
 
     .active-filter-pill {
@@ -907,7 +989,7 @@
       -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--glass-border);
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--ink-main);
       display: inline-flex;
       align-items: center;
@@ -917,50 +999,29 @@
       text-overflow: ellipsis;
     }
 
-    .layer-toggle {
-      flex-shrink: 0;
-      height: 36px;
-      padding: 0 12px;
-      border-radius: 999px;
-      background: var(--glass-bg);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--glass-border);
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--ink-main);
-      transition: transform 0.14s ease;
-    }
-
-    .layer-toggle:active {
-      transform: scale(0.95);
-    }
-
     .hud-telemetry {
-      align-self: stretch;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
+      gap: 8px;
       padding: 6px 11px;
-      border-radius: 11px;
-      background: rgba(12, 16, 21, 0.72);
+      border-radius: 10px;
+      background: var(--glass-bg);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--glass-border);
       font-size: 11px;
     }
 
     .hud-coord {
       font-size: 11px;
-      font-weight: 500;
-      letter-spacing: 0.01em;
-      color: rgba(244, 246, 248, 0.8);
+      font-weight: 400;
+      color: var(--ink-sub);
       white-space: nowrap;
     }
 
     .hud-status {
-      color: #FF8E63;
+      color: var(--accent);
       font-weight: 600;
       white-space: nowrap;
       overflow: hidden;
@@ -992,23 +1053,17 @@
     .map-tool-btn {
       width: 38px;
       height: 36px;
-      border-radius: 11px;
+      border-radius: 10px;
       background: var(--glass-bg);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--glass-border);
       color: var(--ink-main);
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 600;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32);
-      transition: transform 0.14s ease;
-    }
-
-    .map-tool-btn:active {
-      transform: scale(0.92);
     }
 
     .map-tool-wide {
@@ -1021,12 +1076,12 @@
     .bottom-sheet {
       pointer-events: auto;
       background: var(--glass-strong);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
       border: 1px solid var(--glass-border);
-      border-radius: 20px;
-      padding: 15px 15px 13px;
-      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.45);
+      border-radius: 18px;
+      padding: 15px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
       display: flex;
       flex-direction: column;
       gap: 12px;
@@ -1041,41 +1096,50 @@
 
     .place-card.is-flying {
       opacity: 0.72;
-      transform: scale(0.98) translateY(2px);
+      transform: scale(0.98);
     }
 
-    .place-card.is-landed {
-      animation: cardLanded 0.36s var(--ease-spring);
+    .card-badges {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
     }
 
-    @keyframes cardLanded {
-      0% { opacity: 0.55; transform: scale(0.96) translateY(6px); }
-      100% { opacity: 1; transform: scale(1) translateY(0); }
+    .card-badges[hidden] {
+      display: none;
+    }
+
+    .card-badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      background: var(--surface-raised);
+      color: var(--ink-sub);
     }
 
     .card-title {
-      font-size: clamp(1.22rem, 4.7vw, 1.45rem);
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      line-height: 1.24;
+      font-size: 19px;
+      font-weight: 600;
+      letter-spacing: -0.015em;
+      line-height: 1.25;
       color: var(--ink-main);
     }
 
     .card-sub {
       font-size: 13px;
       line-height: 1.42;
-      color: #C7D0D8;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      color: var(--ink-sub);
     }
 
     .card-meta {
       font-size: 12px;
-      font-weight: 600;
-      color: #FF8E63;
-      line-height: 1.35;
+      font-weight: 500;
+      color: var(--accent);
     }
 
     .empty-panel {
@@ -1093,7 +1157,7 @@
 
     .empty-title {
       font-size: 15px;
-      font-weight: 700;
+      font-weight: 600;
       color: var(--ink-main);
     }
 
@@ -1106,9 +1170,9 @@
     .empty-action-btn {
       margin-top: 2px;
       padding: 8px 14px;
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid var(--glass-border);
+      border-radius: 9px;
+      background: var(--surface-raised);
+      border: 1px solid var(--line-subtle);
       font-size: 12.5px;
       font-weight: 600;
       color: var(--ink-main);
@@ -1116,8 +1180,8 @@
 
     .action-dock {
       display: grid;
-      grid-template-columns: 1.22fr 1fr;
-      gap: 9px;
+      grid-template-columns: 1.25fr 1fr;
+      gap: 8px;
     }
 
     .action-dock.is-single {
@@ -1126,81 +1190,40 @@
 
     .action-primary {
       padding: 13px 14px;
-      border-radius: 13px;
+      border-radius: 12px;
       background: var(--accent);
       color: var(--accent-ink);
-      font-size: 14.5px;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-      box-shadow: 0 3px 0 var(--accent-dark), 0 8px 18px rgba(234, 88, 40, 0.28);
-      transition: transform 0.14s ease, box-shadow 0.14s ease;
+      font-size: 14px;
+      font-weight: 600;
+      transition: transform 0.15s ease;
     }
 
     .action-primary:active:not(:disabled) {
-      transform: translateY(2px) scale(0.985);
-      box-shadow: 0 1px 0 var(--accent-dark);
+      transform: scale(0.98);
     }
 
     .action-secondary {
       padding: 13px 12px;
-      border-radius: 13px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      background: var(--surface-raised);
+      border: 1px solid var(--line-subtle);
       color: var(--ink-main);
       font-size: 13.5px;
-      font-weight: 600;
-      transition: transform 0.14s ease;
-    }
-
-    .action-secondary:active:not(:disabled) {
-      transform: scale(0.96);
+      font-weight: 500;
     }
 
     .map-attrib {
       font-size: 10px;
-      color: rgba(244, 246, 248, 0.48);
+      color: var(--ink-muted);
       text-align: right;
       line-height: 1;
-      margin-top: -3px;
-    }
-
-    /* ==================== 主頁右上管理按鈕 ==================== */
-    .home-header-actions {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      flex-shrink: 0;
-    }
-
-    .manage-icon-btn {
-      width: 34px;
-      height: 34px;
-      border-radius: 999px;
-      background: var(--surface-raised);
-      border: 1px solid var(--glass-border);
-      color: var(--ink-main);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.2s var(--ease-spring), border-color 0.2s ease, background-color 0.2s ease;
-    }
-
-    .manage-icon-btn:hover {
-      border-color: rgba(255, 255, 255, 0.26);
-      background: #222D3B;
-    }
-
-    .manage-icon-btn:active {
-      transform: scale(0.92);
     }
 
     /* ==================== PAGE 3：口袋名單管理頁 ==================== */
     .manage-screen {
       display: flex;
       flex-direction: column;
-      background:
-        radial-gradient(circle at 86% 4%, rgba(234, 88, 40, 0.1) 0%, rgba(11, 15, 20, 0) 42%),
-        var(--bg-home);
+      background: var(--bg-home);
     }
 
     .manage-header {
@@ -1210,9 +1233,7 @@
       flex-direction: column;
       gap: 10px;
       border-bottom: 1px solid var(--line-subtle);
-      background: rgba(11, 15, 20, 0.92);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
+      background: var(--bg-home);
     }
 
     .manage-nav {
@@ -1224,7 +1245,7 @@
 
     .manage-nav-title {
       font-size: 16px;
-      font-weight: 800;
+      font-weight: 600;
       color: var(--ink-main);
       display: inline-flex;
       align-items: center;
@@ -1233,10 +1254,10 @@
 
     .manage-count-chip {
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 500;
       padding: 2px 7px;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.09);
+      background: var(--surface-raised);
       color: var(--ink-sub);
     }
 
@@ -1250,19 +1271,14 @@
       height: 34px;
       padding: 0 11px;
       border-radius: 999px;
-      background: var(--surface-raised);
-      border: 1px solid var(--glass-border);
+      background: var(--surface-card);
+      border: 1px solid var(--line-subtle);
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--ink-main);
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      transition: transform 0.14s ease;
-    }
-
-    .pill-ghost-btn:active {
-      transform: scale(0.95);
     }
 
     .pill-accent-btn {
@@ -1272,31 +1288,24 @@
       background: var(--accent);
       color: #FFFFFF;
       font-size: 12px;
-      font-weight: 700;
-      box-shadow: 0 4px 12px rgba(234, 88, 40, 0.32);
-      transition: transform 0.14s ease;
-    }
-
-    .pill-accent-btn:active {
-      transform: scale(0.95);
+      font-weight: 600;
     }
 
     .search-box {
       width: 100%;
       height: 38px;
       padding: 0 13px;
-      border-radius: 12px;
+      border-radius: 10px;
       background: var(--surface-card);
-      border: 1px solid var(--glass-border);
+      border: 1px solid var(--line-subtle);
       color: var(--ink-main);
       font-family: inherit;
       font-size: 13px;
       outline: none;
-      transition: border-color 0.2s ease;
     }
 
     .search-box:focus {
-      border-color: rgba(234, 88, 40, 0.8);
+      border-color: var(--accent);
     }
 
     .search-box::placeholder {
@@ -1320,19 +1329,18 @@
       flex-shrink: 0;
       padding: 5px 11px;
       border-radius: 999px;
-      background: var(--surface-raised);
+      background: var(--surface-card);
       border: 1px solid var(--line-subtle);
       font-size: 11.5px;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--ink-muted);
-      transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
     }
 
     .m-filter-pill.is-active {
       background: var(--ink-main);
-      color: #0E1318;
+      color: var(--bg-home);
       border-color: var(--ink-main);
-      font-weight: 700;
+      font-weight: 600;
     }
 
     .manage-list {
@@ -1354,18 +1362,18 @@
 
     .store-row {
       padding: 11px 12px;
-      border-radius: 15px;
+      border-radius: 13px;
       background: var(--surface-card);
-      border: 1px solid var(--line-subtle);
+      border: 1px solid var(--line-card);
+      box-shadow: var(--card-shadow);
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-      transition: border-color 0.2s ease, opacity 0.2s ease;
     }
 
     .store-row.is-disabled {
-      opacity: 0.56;
+      opacity: 0.52;
     }
 
     .store-row-info {
@@ -1384,28 +1392,35 @@
     }
 
     .store-dot {
-      width: 8px;
-      height: 8px;
+      width: 7px;
+      height: 7px;
       border-radius: 999px;
       flex-shrink: 0;
     }
 
     .store-row-name {
       font-size: 14px;
-      font-weight: 700;
+      font-weight: 600;
       color: var(--ink-main);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
+    .store-rating-tag {
+      flex-shrink: 0;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--ink-muted);
+    }
+
     .store-muted-tag {
       flex-shrink: 0;
       font-size: 10px;
-      font-weight: 700;
+      font-weight: 500;
       padding: 1px 6px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      background: var(--surface-raised);
       color: var(--ink-muted);
     }
 
@@ -1429,45 +1444,41 @@
       width: 38px;
       height: 22px;
       border-radius: 999px;
-      background: #273240;
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: var(--surface-raised);
+      border: 1px solid var(--line-subtle);
       transition: background-color 0.2s ease;
     }
 
     .mini-switch::after {
-      content: '';
+      content: "";
       position: absolute;
       top: 2px;
       left: 2px;
       width: 16px;
       height: 16px;
       border-radius: 999px;
-      background: #CBD5E1;
-      transition: transform 0.22s var(--ease-spring), background-color 0.2s ease;
+      background: var(--ink-muted);
+      transition: transform 0.2s var(--ease-spring), background-color 0.2s ease;
     }
 
     .mini-switch.is-on {
-      background: rgba(52, 211, 153, 0.3);
-      border-color: rgba(52, 211, 153, 0.65);
+      background: var(--emerald-tag-bg);
+      border-color: var(--emerald);
     }
 
     .mini-switch.is-on::after {
       transform: translateX(16px);
-      background: #34D399;
+      background: var(--emerald);
     }
 
     .row-edit-btn {
       padding: 6px 10px;
-      border-radius: 9px;
-      background: rgba(255, 255, 255, 0.07);
+      border-radius: 8px;
+      background: var(--surface-raised);
       border: 1px solid var(--line-subtle);
       font-size: 11.5px;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--ink-main);
-    }
-
-    .row-edit-btn:active {
-      transform: scale(0.95);
     }
 
     .manage-empty {
@@ -1477,14 +1488,14 @@
       font-size: 13px;
     }
 
-    /* ==================== 彈出式表單抽屜（新增／編輯 ＆ 雲端同步） ==================== */
+    /* ==================== 彈出式表單抽屜 ==================== */
     .modal-backdrop {
       position: absolute;
       inset: 0;
       z-index: 20;
-      background: rgba(5, 8, 12, 0.72);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
       display: flex;
       align-items: flex-end;
       justify-content: center;
@@ -1501,15 +1512,15 @@
     .modal-sheet {
       width: 100%;
       max-height: 90dvh;
-      background: #121821;
-      border-top: 1px solid var(--glass-border);
-      border-radius: 22px 22px 0 0;
+      background: var(--surface-card);
+      border-top: 1px solid var(--line-subtle);
+      border-radius: 20px 20px 0 0;
       display: flex;
       flex-direction: column;
       overflow: hidden;
       transform: translateY(28px);
-      transition: transform 0.3s var(--ease-spring);
-      box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.65);
+      transition: transform 0.28s var(--ease-spring);
+      box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.35);
     }
 
     .modal-backdrop.is-open .modal-sheet {
@@ -1527,7 +1538,7 @@
 
     .modal-title {
       font-size: 16px;
-      font-weight: 800;
+      font-weight: 600;
       color: var(--ink-main);
     }
 
@@ -1535,9 +1546,9 @@
       width: 30px;
       height: 30px;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.08);
+      background: var(--surface-raised);
       color: var(--ink-sub);
-      font-size: 14px;
+      font-size: 13px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -1551,13 +1562,13 @@
       padding: 14px 16px 16px;
       display: flex;
       flex-direction: column;
-      gap: 13px;
+      gap: 12px;
     }
 
     .form-section {
-      background: rgba(255, 255, 255, 0.03);
+      background: var(--surface-raised);
       border: 1px solid var(--line-subtle);
-      border-radius: 14px;
+      border-radius: 13px;
       padding: 12px;
       display: flex;
       flex-direction: column;
@@ -1566,8 +1577,8 @@
 
     .form-section-title {
       font-size: 12px;
-      font-weight: 700;
-      color: #FF946C;
+      font-weight: 600;
+      color: var(--ink-sub);
     }
 
     .field-group {
@@ -1578,7 +1589,7 @@
 
     .field-label {
       font-size: 11.5px;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--ink-sub);
     }
 
@@ -1586,9 +1597,9 @@
     .field-textarea {
       width: 100%;
       padding: 9px 11px;
-      border-radius: 10px;
-      background: #0C1117;
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 9px;
+      background: var(--bg-home);
+      border: 1px solid var(--line-subtle);
       color: var(--ink-main);
       font-family: inherit;
       font-size: 13px;
@@ -1597,7 +1608,7 @@
 
     .field-input:focus,
     .field-textarea:focus {
-      border-color: rgba(234, 88, 40, 0.8);
+      border-color: var(--accent);
     }
 
     .field-textarea {
@@ -1627,15 +1638,15 @@
     .cat-pick-btn {
       padding: 6px 11px;
       border-radius: 999px;
-      background: #19222C;
+      background: var(--bg-home);
       border: 1px solid var(--line-subtle);
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--ink-sub);
     }
 
     .cat-pick-btn.is-active {
-      background: rgba(234, 88, 40, 0.2);
+      background: var(--accent);
       border-color: var(--accent);
       color: #FFFFFF;
     }
@@ -1653,16 +1664,16 @@
     }
 
     .parse-feedback.is-warn {
-      color: #FBBF24;
+      color: #D97706;
     }
 
     .parse-action-link {
       align-self: flex-start;
       padding: 6px 10px;
       border-radius: 8px;
-      background: rgba(56, 189, 248, 0.14);
-      border: 1px solid rgba(56, 189, 248, 0.42);
-      color: #7DD3FC;
+      background: var(--surface-card);
+      border: 1px solid var(--line-subtle);
+      color: var(--accent);
       font-size: 11.5px;
       font-weight: 600;
     }
@@ -1686,58 +1697,50 @@
 
     .hour-day {
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--ink-sub);
     }
 
     .hour-rest-btn {
       height: 34px;
-      border-radius: 9px;
-      background: rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      background: var(--bg-home);
       border: 1px solid var(--line-subtle);
       font-size: 11.5px;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--ink-muted);
     }
 
     .hour-rest-btn.is-rest {
-      background: rgba(248, 113, 113, 0.16);
-      border-color: rgba(248, 113, 113, 0.5);
-      color: #FCA5A5;
+      background: rgba(239, 68, 68, 0.14);
+      border-color: rgba(239, 68, 68, 0.45);
+      color: #EF4444;
     }
 
     .small-btn {
       flex-shrink: 0;
       height: 34px;
       padding: 0 10px;
-      border-radius: 9px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid var(--glass-border);
+      border-radius: 8px;
+      background: var(--bg-home);
+      border: 1px solid var(--line-subtle);
       font-size: 11.5px;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--ink-main);
     }
 
-    .small-btn:active {
-      transform: scale(0.95);
-    }
-
-    .small-btn:disabled {
-      opacity: 0.55;
-      cursor: wait;
-    }
-
     .small-btn.is-accent {
-      background: rgba(234, 88, 40, 0.18);
-      border-color: rgba(234, 88, 40, 0.52);
-      color: #FFB499;
+      background: var(--accent-tag-bg);
+      border-color: var(--accent);
+      color: var(--accent-tag-ink);
+      font-weight: 600;
     }
 
     .modal-foot {
       flex-shrink: 0;
       padding: 12px 16px calc(env(safe-area-inset-bottom, 12px) + 12px);
       border-top: 1px solid var(--line-subtle);
-      background: #10161E;
+      background: var(--surface-card);
       display: flex;
       align-items: center;
       gap: 9px;
@@ -1745,12 +1748,12 @@
 
     .danger-btn {
       padding: 12px 14px;
-      border-radius: 12px;
-      background: rgba(248, 113, 113, 0.12);
-      border: 1px solid rgba(248, 113, 113, 0.45);
-      color: #FCA5A5;
+      border-radius: 11px;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #EF4444;
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 600;
       white-space: nowrap;
     }
 
@@ -1760,19 +1763,18 @@
 
     .danger-btn.is-confirm {
       background: #DC2626;
-      border-color: #EF4444;
+      border-color: #DC2626;
       color: #FFFFFF;
     }
 
     .modal-primary-btn {
       flex: 1;
       padding: 12px 14px;
-      border-radius: 12px;
+      border-radius: 11px;
       background: var(--accent);
       color: #FFFFFF;
       font-size: 14px;
-      font-weight: 700;
-      box-shadow: 0 3px 0 var(--accent-dark);
+      font-weight: 600;
     }
 
     .sync-hint {
@@ -1783,16 +1785,15 @@
 
     .sync-status {
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--emerald);
       min-height: 16px;
     }
 
     .sync-status.is-err {
-      color: #FCA5A5;
+      color: #EF4444;
     }
 
-    /* ==================== 浮動 Toast 提示 ==================== */
     .app-toast {
       position: absolute;
       left: 50%;
@@ -1801,16 +1802,15 @@
       z-index: 30;
       padding: 9px 15px;
       border-radius: 999px;
-      background: rgba(18, 25, 34, 0.96);
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+      background: var(--ink-main);
+      color: var(--bg-home);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
       font-size: 12.5px;
       font-weight: 600;
-      color: #FFFFFF;
       white-space: nowrap;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.22s ease, transform 0.26s var(--ease-spring);
+      transition: opacity 0.2s ease, transform 0.24s var(--ease-spring);
     }
 
     .app-toast.is-show {
@@ -1819,10 +1819,10 @@
     }
   </style>
 </head>
-<body data-screen="home" data-layer="sat">
+<body data-screen="home" data-layer="sat" data-theme="graphite">
   <main class="app-shell">
 
-    <!-- ==================== PAGE 1：Bento 趣味互動主畫面 ==================== -->
+    <!-- ==================== PAGE 1：Bento 主畫面（維持原架構，套用乾淨樣式） ==================== -->
     <section id="homeScreen" class="screen home-screen" aria-label="主畫面">
       <div class="home-scroll">
         <header class="home-header">
@@ -1835,8 +1835,21 @@
               <span class="dot"></span>
               <span id="homeOpenLabel">只抽營業中</span>
             </button>
+            <button type="button" id="themeToggleBtn" class="manage-icon-btn" aria-label="切換配色主題" title="切換配色（霧面黑 ⇄ 溫潤米）">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2" />
+                <path d="M12 20v2" />
+                <path d="m4.93 4.93 1.41 1.41" />
+                <path d="m17.66 17.66 1.41 1.41" />
+                <path d="M2 12h2" />
+                <path d="M20 12h2" />
+                <path d="m6.34 17.66-1.41 1.41" />
+                <path d="m19.07 4.93-1.41 1.41" />
+              </svg>
+            </button>
             <button type="button" id="openManageBtn" class="manage-icon-btn" aria-label="管理餐廳清單" title="管理口袋名單">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="8" y1="6" x2="21" y2="6" />
                 <line x1="8" y1="12" x2="21" y2="12" />
                 <line x1="8" y1="18" x2="21" y2="18" />
@@ -1849,16 +1862,16 @@
         </header>
 
         <div class="bento-grid">
-          <!-- Bento 左卡：即時營業 SVG 進度環（點擊快速切換營業條件） -->
+          <!-- Bento 左卡：即時營業 SVG 進度環 -->
           <button type="button" id="openRingCard" class="bento-card ring-card is-tappable" aria-label="即時營業比例環">
             <div class="card-kicker">
               <span class="kicker-title">即時營業</span>
               <span class="kicker-pill" id="homeOpenPct">0%</span>
             </div>
             <div class="ring-wrap">
-              <svg class="progress-ring" viewBox="0 0 82 82" width="82" height="82">
-                <circle class="progress-ring__track" cx="41" cy="41" r="33" stroke-width="6.5" fill="transparent" />
-                <circle id="openRingCircle" class="progress-ring__circle" cx="41" cy="41" r="33" stroke-width="6.5" stroke="#34D399" stroke-linecap="round" fill="transparent" />
+              <svg class="progress-ring" viewBox="0 0 82 82" width="72" height="72">
+                <circle class="progress-ring__track" cx="41" cy="41" r="33" stroke-width="6" fill="transparent" />
+                <circle id="openRingCircle" class="progress-ring__circle" cx="41" cy="41" r="33" stroke-width="6" stroke="var(--emerald)" stroke-linecap="round" fill="transparent" />
               </svg>
               <div class="ring-center">
                 <span class="ring-num" id="openRingNum">0</span>
@@ -1868,21 +1881,24 @@
             <div class="ring-foot" id="openRingFoot">目前時段營業中</div>
           </button>
 
-          <!-- Bento 右卡：互動靈感盲盒 / 近期最愛卡（點擊切換下一間靈感） -->
+          <!-- Bento 右卡：互動靈感盲盒 -->
           <button type="button" id="teaserCard" class="bento-card teaser-card is-tappable" aria-label="隨機未探索靈感卡">
             <div class="card-kicker">
               <span class="kicker-title" id="teaserTitle">今日靈感盲盒</span>
               <span class="kicker-pill" id="teaserTag">換一間 ↻</span>
             </div>
             <div class="teaser-body" id="teaserBody">
-              <span class="teaser-badge" id="teaserBadge">早午餐</span>
+              <div class="teaser-badge-row">
+                <span class="teaser-badge" id="teaserBadge">早午餐</span>
+                <span class="teaser-rating-pill" id="teaserRating" hidden>★ 4.5</span>
+              </div>
               <div class="teaser-name" id="teaserName">載入推薦中…</div>
               <div class="teaser-meta" id="teaserMeta">台中北區口袋名單</div>
             </div>
             <div class="teaser-hint" id="teaserHint">點卡片偷看未吃過新店</div>
           </button>
 
-          <!-- Bento 中卡：圖示化 3×2 品項卡片牆 -->
+          <!-- Bento 中卡：3×2 品項卡片牆 -->
           <article class="bento-card span-2">
             <div class="card-kicker">
               <span class="kicker-title">選擇想吃的品項</span>
@@ -1891,7 +1907,7 @@
             <div class="cat-grid" id="homeCategoryGrid" role="radiogroup" aria-label="餐廳分類選擇"></div>
           </article>
 
-          <!-- Bento 下卡：49 格探索星圖 ⇄ 分類統計 雙切卡 -->
+          <!-- Bento 下卡：探索星圖 ⇄ 飲食統計 -->
           <article class="bento-card span-2">
             <div class="card-kicker">
               <span class="kicker-title">口袋足跡與偏好</span>
@@ -1902,8 +1918,8 @@
             </div>
 
             <div class="matrix-pane" id="matrixPane">
-              <div class="matrix-10" id="exploreMatrix" aria-label="49 間口袋名單探索點陣圖"></div>
-              <div class="matrix-foot-row" style="margin-top:9px;">
+              <div class="matrix-10" id="exploreMatrix" aria-label="口袋名單探索點陣圖"></div>
+              <div class="matrix-foot-row" style="margin-top:7px;">
                 <span class="matrix-tip-text" id="matrixTip">點擊任一方格查看該間店家狀態</span>
                 <span class="matrix-count-pill" id="homeExploreKpi">已解鎖 0/49</span>
               </div>
@@ -1917,7 +1933,7 @@
         </div>
       </div>
 
-      <!-- 底部動態圓盤啟動器 -->
+      <!-- 底部圓盤啟動器 -->
       <footer class="dial-dock">
         <div class="dial-side">
           <span class="dial-side-label">已選品項</span>
@@ -1927,13 +1943,9 @@
         <button type="button" id="enterMapBtn" class="dial-launcher" aria-label="啟動衛星俯視選餐廳">
           <span class="dial-pulse-wave"></span>
           <span class="dial-pulse-wave is-delay"></span>
-          <svg class="dial-compass-svg" viewBox="0 0 114 114" width="114" height="114" aria-hidden="true">
-            <circle cx="57" cy="57" r="52" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1.2" stroke-dasharray="3 6" />
-            <circle cx="57" cy="57" r="52" fill="none" stroke="#EA5828" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="56 271" />
-            <circle cx="57" cy="5" r="3" fill="#FF9C75" />
-            <circle cx="109" cy="57" r="2" fill="rgba(255,255,255,0.45)" />
-            <circle cx="57" cy="109" r="2" fill="rgba(255,255,255,0.45)" />
-            <circle cx="5" cy="57" r="2" fill="rgba(255,255,255,0.45)" />
+          <svg class="dial-compass-svg" viewBox="0 0 114 114" width="96" height="96" aria-hidden="true">
+            <circle cx="57" cy="57" r="51" fill="none" stroke="currentColor" stroke-opacity="0.16" stroke-width="1.2" stroke-dasharray="3 6" />
+            <circle cx="57" cy="57" r="51" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-dasharray="48 272" />
           </svg>
           <span class="dial-core">
             <span class="dial-core-main" id="enterMapBtnMain">出發選餐</span>
@@ -1976,6 +1988,7 @@
 
         <footer class="bottom-sheet" aria-live="polite">
           <div class="place-card" id="placeCard">
+            <div class="card-badges" id="cardBadges" hidden></div>
             <h2 class="card-title" id="cardTitle">全區衛星俯視待命</h2>
             <p class="card-sub" id="cardSub"></p>
             <p class="card-meta" id="cardMeta"></p>
@@ -2039,7 +2052,6 @@
         </div>
 
         <div class="modal-body">
-          <!-- 快速貼上 Google Maps -->
           <div class="form-section">
             <div class="form-section-title">貼上 Google Maps 連結或輸入店名（自動抓取資訊）</div>
             <textarea
@@ -2056,7 +2068,6 @@
             </div>
           </div>
 
-          <!-- 基本資訊 -->
           <div class="form-section">
             <div class="form-section-title">基本資訊</div>
             <div class="field-group">
@@ -2080,7 +2091,6 @@
             </div>
           </div>
 
-          <!-- 營業時間 -->
           <div class="form-section">
             <div class="form-section-title">營業時間（24 小時制，多時段用逗號分隔）</div>
             <div class="inline-row">
@@ -2091,7 +2101,6 @@
             <div class="hours-grid" id="editHoursGrid"></div>
           </div>
 
-          <!-- 座標與連結 -->
           <div class="form-section">
             <div class="form-section-title">衛星座標與 Google Maps 連結</div>
             <div class="two-col">

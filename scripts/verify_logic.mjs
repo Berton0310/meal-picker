@@ -193,4 +193,16 @@ test('placeToCsvRow round-trips cleanly with parseCSV', () => {
   assert.equal(parsed[0][15], '超好吃,必點');
 });
 
+// 7. 前端 DOM 結構與 ID 綁定一致性檢查
+console.log('\n[7] Checking index.html & app.js DOM ID bindings...');
+test('All getElementById calls in app.js match elements in index.html', () => {
+  const htmlText = fs.readFileSync(path.join(ROOT_DIR, 'index.html'), 'utf-8');
+  const jsText = fs.readFileSync(path.join(ROOT_DIR, 'app.js'), 'utf-8');
+  const ids = [...jsText.matchAll(/getElementById\('([^']+)'\)/g)].map(m => m[1]);
+  const uniqueIds = [...new Set(ids)];
+  assert.ok(uniqueIds.length >= 45, `Expected at least 45 DOM IDs, found ${uniqueIds.length}`);
+  const missing = uniqueIds.filter(id => !htmlText.includes(`id="${id}"`));
+  assert.deepEqual(missing, [], `Missing DOM IDs in index.html: ${missing.join(', ')}`);
+});
+
 console.log(`\nAll ${passedCount} verification checks passed!`);

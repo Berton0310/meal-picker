@@ -551,8 +551,14 @@
       }
     }
 
+    const THEME_ORDER = ['graphite', 'airbnb'];
+    const THEME_LABELS = {
+      graphite: '霧面黑（Linear 風）',
+      airbnb: '溫潤米（Airbnb 風）'
+    };
+
     const savedPrefs = Object.assign(
-      { layer: 'sat', category: '全部', onlyOpen: true },
+      { layer: 'sat', category: '全部', onlyOpen: true, theme: 'graphite' },
       loadJson(STORAGE_KEYS.prefs, {})
     );
 
@@ -562,6 +568,14 @@
     const searchParams = new URLSearchParams(window.location.search);
     const urlLayer = searchParams.get('layer');
     const urlScreen = searchParams.get('screen');
+    const urlTheme = searchParams.get('theme');
+    if (THEME_ORDER.includes(urlTheme)) {
+      savedPrefs.theme = urlTheme;
+    }
+    if (!THEME_ORDER.includes(savedPrefs.theme)) {
+      savedPrefs.theme = 'graphite';
+    }
+    document.body.setAttribute('data-theme', savedPrefs.theme);
     if (MAP_LAYERS[urlLayer]) savedPrefs.layer = urlLayer;
     if (!MAP_LAYERS[savedPrefs.layer]) savedPrefs.layer = 'sat';
     if (!CATEGORIES.includes(savedPrefs.category)) savedPrefs.category = '全部';
@@ -1235,6 +1249,7 @@
       if (!current) return;
 
       const badgeEl = document.getElementById('teaserBadge');
+      const ratingEl = document.getElementById('teaserRating');
       const nameEl = document.getElementById('teaserName');
       const metaEl = document.getElementById('teaserMeta');
       const hintEl = document.getElementById('teaserHint');
@@ -1243,6 +1258,14 @@
       if (badgeEl) {
         badgeEl.textContent = current.category;
         badgeEl.style.color = color;
+      }
+      if (ratingEl) {
+        if (Number.isFinite(Number(current.rating))) {
+          ratingEl.hidden = false;
+          ratingEl.textContent = `★ ${Number(current.rating).toFixed(1)}`;
+        } else {
+          ratingEl.hidden = true;
+        }
       }
       if (nameEl) nameEl.textContent = current.name;
       if (metaEl) metaEl.textContent = formatMinimalMeta(current);
@@ -1329,7 +1352,8 @@
         const displayPct = appState.prefs.onlyOpen ? openPctVal : 100;
         ringCircle.style.strokeDasharray = `${circumference} ${circumference}`;
         ringCircle.style.strokeDashoffset = circumference - (displayPct / 100) * circumference;
-        ringCircle.style.stroke = appState.prefs.onlyOpen ? '#34D399' : '#38BDF8';
+        ringCircle.style.stroke = appState.prefs.onlyOpen ? 'var(--emerald)' : 'var(--accent)';
+        ringCircle.style.filter = 'none';
       }
       const openPctEl = document.getElementById('homeOpenPct');
       const ringNumEl = document.getElementById('openRingNum');
@@ -1385,8 +1409,11 @@
         });
       }
 
-      // Bento 下卡：49 格星圖 ⇄ 飲食統計雙切卡
+      // Bento 下卡：星圖 ⇄ 飲食統計雙切卡
       document.querySelectorAll('.sub-tab').forEach(btn => {
+        if (btn.dataset.subtab === 'matrix') {
+          btn.textContent = `${allPlaces.length} 格星圖`;
+        }
         btn.classList.toggle('is-active', btn.dataset.subtab === appState.homeSubTab);
       });
       const matrixPane = document.getElementById('matrixPane');
@@ -1560,6 +1587,7 @@
       appState.camera = { lat: ov.lat, lng: ov.lng, zoom: ov.zoom };
 
       const cardEl = document.getElementById('placeCard');
+      const badgesEl = document.getElementById('cardBadges');
       const emptyEl = document.getElementById('emptyPanel');
       const titleEl = document.getElementById('cardTitle');
       const subEl = document.getElementById('cardSub');
@@ -1577,6 +1605,14 @@
       emptyEl.hidden = true;
       cardEl.hidden = false;
       cardEl.classList.remove('is-flying', 'is-landed');
+      if (badgesEl) {
+        badgesEl.hidden = false;
+        const openTxtBadge = appState.prefs.onlyOpen ? '營業中篩選' : '全時段篩選';
+        badgesEl.innerHTML = `
+          <span class="card-badge-pill is-open">● ${escapeHtml(openTxtBadge)}</span>
+          <span class="card-badge-pill">${escapeHtml(appState.prefs.category)}</span>
+        `;
+      }
       updateFooterAvailability(true, 'ready');
 
       const openTxt = appState.prefs.onlyOpen ? '僅限營業中' : '不限營業時段';
@@ -1606,8 +1642,29 @@
       renderHomeDashboard();
     }
 
+    function renderCardBadges(pick) {
+      const badgesEl = document.getElementById('cardBadges');
+      if (!badgesEl || !pick) return;
+      const color = CATEGORY_COLORS[pick.category] || '#EA5828';
+      const ratingHtml = Number.isFinite(Number(pick.rating))
+        ? `<span class="card-badge-pill is-rating">★ ${Number(pick.rating).toFixed(1)}${Number.isFinite(Number(pick.reviews)) ? ` (${pick.reviews})` : ''}</span>`
+        : '';
+      const openState = pick.openStatus ? pick.openStatus.state : 'unknown';
+      const openLabel = openState === 'open'
+        ? '營業中'
+        : (openState === 'closing_soon' ? '即將打烊' : (openState === 'closed' ? '休息中' : '時段未詳'));
+      const openCls = openState === 'open' ? 'is-open' : '';
+      badgesEl.hidden = false;
+      badgesEl.innerHTML = `
+        <span class="card-badge-pill" style="color:${color};border-color:${color}44;">● ${escapeHtml(pick.category)}</span>
+        ${ratingHtml}
+        <span class="card-badge-pill ${openCls}">${escapeHtml(openLabel)}</span>
+      `;
+    }
+
     function showPlaceCard(pick, state, stepNum = 0, totalSteps = 0) {
       const cardEl = document.getElementById('placeCard');
+      const badgesEl = document.getElementById('cardBadges');
       const emptyEl = document.getElementById('emptyPanel');
       const titleEl = document.getElementById('cardTitle');
       const subEl = document.getElementById('cardSub');
@@ -1629,6 +1686,7 @@
       if (state === 'flying') {
         cardEl.classList.remove('is-landed');
         cardEl.classList.add('is-flying');
+        if (badgesEl) badgesEl.hidden = true;
         titleEl.textContent = '衛星俯視輪轉中…';
         subEl.textContent = '正縮小地圖並跳轉至下一間候選餐廳';
         metaEl.textContent = `候選清單 ${getCandidates().length} 間`;
@@ -1638,6 +1696,7 @@
       if (state === 'focusing') {
         cardEl.classList.remove('is-landed');
         cardEl.classList.add('is-flying');
+        renderCardBadges(pick);
         titleEl.textContent = pick.name;
         subEl.textContent = `${pick.category} · ${pick.note || '精選推薦'}`;
         metaEl.textContent = `輪轉聚焦 ${stepNum}/${totalSteps} · 即將縮小跳轉下一間`;
@@ -1651,6 +1710,7 @@
         cardEl.classList.add('is-landed');
       }
 
+      renderCardBadges(pick);
       titleEl.textContent = pick.name;
       subEl.textContent = `${pick.category} · ${pick.note || '精選推薦'}`;
       metaEl.textContent = formatMinimalMeta(pick);
@@ -2184,19 +2244,24 @@
       }
 
       listEl.innerHTML = '';
-      filtered.forEach(p => {
+      filtered.forEach((p, idx) => {
         const isOn = p.enabled !== false;
         const color = CATEGORY_COLORS[p.category] || '#EA5828';
         const hasCoords = Number.isFinite(p.lat) && Number.isFinite(p.lng);
         const openTxt = p.openStatus.state === 'open' ? p.openStatus.todayText : p.openStatus.label;
+        const ratingBadge = Number.isFinite(Number(p.rating))
+          ? `<span class="store-rating-tag">★ ${Number(p.rating).toFixed(1)}</span>`
+          : '';
 
         const row = document.createElement('div');
         row.className = `store-row ${isOn ? '' : 'is-disabled'}`.trim();
+        row.style.setProperty('--row-idx', String(Math.min(idx, 16)));
         row.innerHTML = `
           <div class="store-row-info">
             <div class="store-row-head">
-              <span class="store-dot" style="background:${color};"></span>
+              <span class="store-dot" style="background:${color};color:${color};"></span>
               <span class="store-row-name">${escapeHtml(p.name)}</span>
+              ${ratingBadge}
               ${isOn ? '' : '<span class="store-muted-tag">已停用</span>'}
             </div>
             <div class="store-row-sub">${escapeHtml(p.category)} · ${escapeHtml(p.note || '無備註')} · ${escapeHtml(openTxt)}${hasCoords ? '' : ' · 未設座標'}</div>
@@ -2337,7 +2402,15 @@
       if (modal) {
         modal.classList.add('is-open');
         modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('has-modal-open');
       }
+    }
+
+    function syncModalBodyClass() {
+      const ed = document.getElementById('editorModal');
+      const sy = document.getElementById('syncModal');
+      const anyOpen = Boolean((ed && ed.classList.contains('is-open')) || (sy && sy.classList.contains('is-open')));
+      document.body.classList.toggle('has-modal-open', anyOpen);
     }
 
     function closeEditorModal() {
@@ -2347,6 +2420,7 @@
         modal.setAttribute('aria-hidden', 'true');
       }
       appState.deleteArmed = false;
+      syncModalBodyClass();
     }
 
     async function handleParseMapsPaste() {
@@ -2585,6 +2659,7 @@
       if (modal) {
         modal.classList.add('is-open');
         modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('has-modal-open');
       }
     }
 
@@ -2594,6 +2669,7 @@
         modal.classList.remove('is-open');
         modal.setAttribute('aria-hidden', 'true');
       }
+      syncModalBodyClass();
     }
 
     // ==================== 背景同步與 GPS ====================
@@ -2663,6 +2739,18 @@
     const openManageBtn = document.getElementById('openManageBtn');
     if (openManageBtn) openManageBtn.onclick = openManageScreen;
 
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    if (themeToggleBtn) {
+      themeToggleBtn.onclick = () => {
+        const curIdx = THEME_ORDER.indexOf(appState.prefs.theme);
+        const nextTheme = THEME_ORDER[(curIdx + 1) % THEME_ORDER.length];
+        appState.prefs.theme = nextTheme;
+        document.body.setAttribute('data-theme', nextTheme);
+        persistPrefs();
+        showToast(`配色：${THEME_LABELS[nextTheme]}`);
+      };
+    }
+
     const teaserCard = document.getElementById('teaserCard');
     if (teaserCard) teaserCard.onclick = shuffleTeaserCard;
 
@@ -2674,6 +2762,18 @@
     });
 
     document.getElementById('enterMapBtn').onclick = launchFromDial;
+
+    // SceneAI / 60fps.design 卡片動態聚光追蹤 (--mx / --my)
+    document.querySelectorAll('.bento-card').forEach(card => {
+      card.addEventListener('pointermove', e => {
+        const rect = card.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        card.style.setProperty('--mx', `${x.toFixed(1)}%`);
+        card.style.setProperty('--my', `${y.toFixed(1)}%`);
+      }, { passive: true });
+    });
 
     // Page 2：衛星俯視抽籤畫面事件
     document.getElementById('backToHomeBtn').onclick = openHomeScreen;
