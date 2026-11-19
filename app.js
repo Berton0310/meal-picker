@@ -494,6 +494,15 @@
       鍋物熱炒: '#C084FC'
     };
 
+    const CATEGORY_ICONS = {
+      全部: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>',
+      健康餐: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>',
+      早午餐: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="M20 12h2"/><path d="m19.07 4.93-1.41 1.41"/><path d="M16 12a4 4 0 0 0-8 0"/><path d="M3 16h18"/><path d="M6 20h12"/></svg>',
+      便當飯類: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><line x1="12" y1="5" x2="12" y2="19"/><line x1="12" y1="12" x2="21" y2="12"/></svg>',
+      麵食小吃: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h16a8 8 0 0 1-16 0Z"/><path d="M8 11V4"/><path d="M12 11V3"/><path d="M16 11V5"/><path d="M7 19h10"/></svg>',
+      鍋物熱炒: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>'
+    };
+
     const MAP_LAYERS = {
       sat: {
         label: '衛星',
@@ -547,6 +556,9 @@
       loadJson(STORAGE_KEYS.prefs, {})
     );
 
+    const CUSTOM_PLACES_KEY = 'meal_picker_custom_places_v1';
+    const GAS_CONFIG_KEY = 'meal_picker_gas_config_v1';
+
     const searchParams = new URLSearchParams(window.location.search);
     const urlLayer = searchParams.get('layer');
     const urlScreen = searchParams.get('screen');
@@ -554,14 +566,32 @@
     if (!MAP_LAYERS[savedPrefs.layer]) savedPrefs.layer = 'sat';
     if (!CATEGORIES.includes(savedPrefs.category)) savedPrefs.category = '全部';
 
+    const customWrap = loadJson(CUSTOM_PLACES_KEY, null);
     const cachedWrap = loadJson(STORAGE_KEYS.placesCache, null);
+    const gasConfig = Object.assign({ url: '', token: '' }, loadJson(GAS_CONFIG_KEY, {}));
+    const hasCustomPlaces = Boolean(customWrap && Array.isArray(customWrap.places));
+
     const appState = {
-      screen: urlScreen === 'map' ? 'map' : 'home',
+      screen: ['map', 'manage'].includes(urlScreen) ? urlScreen : 'home',
       prefs: savedPrefs,
       selectedMatrixKey: null,
-      places: (cachedWrap && Array.isArray(cachedWrap.places) && cachedWrap.places.length > 0)
-        ? cachedWrap.places
-        : DEFAULT_PLACES,
+      homeSubTab: 'matrix',
+      teaserKey: null,
+      hasLocalEdits: hasCustomPlaces,
+      gasConfig,
+      manageFilter: '全部',
+      manageSearch: '',
+      editingPlaceId: null,
+      editingCategory: '便當飯類',
+      editingEnabled: true,
+      deleteArmed: false,
+      resetArmed: false,
+      toastTimer: null,
+      places: hasCustomPlaces
+        ? customWrap.places
+        : ((cachedWrap && Array.isArray(cachedWrap.places) && cachedWrap.places.length > 0)
+            ? cachedWrap.places
+            : DEFAULT_PLACES.map(p => ({ ...p, hours: { ...(p.hours || {}) } }))),
       history: loadJson(STORAGE_KEYS.history, {}),
       userLoc: { lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng, hasGps: false },
       passedIds: new Set(),
@@ -1110,19 +1140,21 @@
       return `${timePart} · ${formatDistShort(place.dist)}`;
     }
 
-    function getAllEnrichedPlaces() {
+    function getAllEnrichedPlaces(includeDisabled = false) {
       const now = new Date();
       const nowMs = now.getTime();
-      return appState.places.map(p => {
-        const hasCoords = Number.isFinite(p.lat) && Number.isFinite(p.lng);
-        const dist = hasCoords
-          ? haversineMeters(appState.userLoc.lat, appState.userLoc.lng, p.lat, p.lng)
-          : Infinity;
-        const openStatus = getOpenStatus(p, now, CLOSING_SOON_MINS);
-        const weightInfo = computeWeightDetail(p, appState.history, appState.passedIds, nowMs, true);
-        const historyRec = lookupHistory(appState.history, p);
-        return { ...p, dist, openStatus, weightInfo, historyRec };
-      });
+      return appState.places
+        .filter(p => includeDisabled || p.enabled !== false)
+        .map(p => {
+          const hasCoords = Number.isFinite(p.lat) && Number.isFinite(p.lng);
+          const dist = hasCoords
+            ? haversineMeters(appState.userLoc.lat, appState.userLoc.lng, p.lat, p.lng)
+            : Infinity;
+          const openStatus = getOpenStatus(p, now, CLOSING_SOON_MINS);
+          const weightInfo = computeWeightDetail(p, appState.history, appState.passedIds, nowMs, true);
+          const historyRec = lookupHistory(appState.history, p);
+          return { ...p, dist, openStatus, weightInfo, historyRec };
+        });
     }
 
     function getCandidates() {
@@ -1181,6 +1213,76 @@
       return `${diffDays} 天前`;
     }
 
+    function pickTeaserPlace(allPlaces, excludeKey = null) {
+      const openUnvisited = allPlaces.filter(p => !p.historyRec && p.openStatus.state !== 'closed' && placeKey(p) !== excludeKey);
+      const unvisited = allPlaces.filter(p => !p.historyRec && placeKey(p) !== excludeKey);
+      const openAny = allPlaces.filter(p => p.openStatus.state !== 'closed' && placeKey(p) !== excludeKey);
+      const pool = openUnvisited.length > 0
+        ? openUnvisited
+        : (unvisited.length > 0 ? unvisited : (openAny.length > 0 ? openAny : allPlaces));
+      if (pool.length === 0) return null;
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    function renderTeaserCard(allPlaces) {
+      let current = allPlaces.find(p => placeKey(p) === appState.teaserKey);
+      if (!current) {
+        current = pickTeaserPlace(allPlaces);
+        appState.teaserKey = current ? placeKey(current) : null;
+      }
+      if (!current) return;
+
+      const badgeEl = document.getElementById('teaserBadge');
+      const nameEl = document.getElementById('teaserName');
+      const metaEl = document.getElementById('teaserMeta');
+      const hintEl = document.getElementById('teaserHint');
+      const color = CATEGORY_COLORS[current.category] || '#EA5828';
+
+      if (badgeEl) {
+        badgeEl.textContent = current.category;
+        badgeEl.style.color = color;
+      }
+      if (nameEl) nameEl.textContent = current.name;
+      if (metaEl) metaEl.textContent = formatMinimalMeta(current);
+      if (hintEl) {
+        hintEl.textContent = current.historyRec
+          ? `已吃過 ${current.historyRec.count} 次 · 點卡看下一間`
+          : '未解鎖口袋新店 · 點卡換一間';
+      }
+    }
+
+    function shuffleTeaserCard() {
+      const bodyEl = document.getElementById('teaserBody');
+      const allPlaces = getAllEnrichedPlaces();
+      const next = pickTeaserPlace(allPlaces, appState.teaserKey);
+      if (!next) return;
+      appState.teaserKey = placeKey(next);
+
+      if (bodyEl) {
+        bodyEl.classList.add('is-flipping');
+        setTimeout(() => {
+          renderTeaserCard(allPlaces);
+          bodyEl.classList.remove('is-flipping');
+        }, 160);
+      } else {
+        renderTeaserCard(allPlaces);
+      }
+    }
+
+    function launchFromDial() {
+      const enterBtn = document.getElementById('enterMapBtn');
+      if (enterBtn && enterBtn.classList.contains('is-launching')) return;
+      if (enterBtn) {
+        enterBtn.classList.add('is-launching');
+        setTimeout(() => {
+          enterBtn.classList.remove('is-launching');
+          openMapScreen();
+        }, 280);
+      } else {
+        openMapScreen();
+      }
+    }
+
     function renderHomeDashboard() {
       const allPlaces = getAllEnrichedPlaces();
       const now = new Date();
@@ -1214,35 +1316,38 @@
         }
       });
 
-      const openSummary = document.getElementById('homeOpenSummary');
-      if (openSummary) {
-        openSummary.textContent = `${stats['全部'].open} / ${stats['全部'].total} 營業中`;
+      // Bento 左卡：即時營業 Dynamic SVG Progress Ring
+      const openPctVal = stats['全部'].total > 0
+        ? Math.round((stats['全部'].open / stats['全部'].total) * 100)
+        : 0;
+      const ringCircle = document.getElementById('openRingCircle');
+      if (ringCircle) {
+        const r = 33;
+        const circumference = 2 * Math.PI * r;
+        const displayPct = appState.prefs.onlyOpen ? openPctVal : 100;
+        ringCircle.style.strokeDasharray = `${circumference} ${circumference}`;
+        ringCircle.style.strokeDashoffset = circumference - (displayPct / 100) * circumference;
+        ringCircle.style.stroke = appState.prefs.onlyOpen ? '#34D399' : '#38BDF8';
+      }
+      const openPctEl = document.getElementById('homeOpenPct');
+      const ringNumEl = document.getElementById('openRingNum');
+      const ringDenomEl = document.getElementById('openRingDenom');
+      const ringFootEl = document.getElementById('openRingFoot');
+      if (openPctEl) openPctEl.textContent = appState.prefs.onlyOpen ? `${openPctVal}%` : '全部';
+      if (ringNumEl) ringNumEl.textContent = String(appState.prefs.onlyOpen ? stats['全部'].open : stats['全部'].total);
+      if (ringDenomEl) ringDenomEl.textContent = `/ ${stats['全部'].total} 間`;
+      if (ringFootEl) ringFootEl.textContent = appState.prefs.onlyOpen ? '營業中 · 點切不限' : '不限時段 · 點切營業';
+
+      // Bento 右卡：互動靈感盲盒卡
+      renderTeaserCard(allPlaces);
+
+      // Bento 中卡：圖示化 3×2 品項卡片牆
+      const selSummary = document.getElementById('homeSelectionSummary');
+      const matchedCount = getCandidates().length;
+      if (selSummary) {
+        selSummary.textContent = `${appState.prefs.category} · ${matchedCount} 間可抽`;
       }
 
-      // 即時營業堆疊分佈條
-      const stackBar = document.getElementById('availStackBar');
-      if (stackBar) {
-        stackBar.innerHTML = '';
-        const denom = stats['全部'].open > 0 ? stats['全部'].open : Math.max(1, stats['全部'].total);
-        realCats.forEach(cat => {
-          const val = stats['全部'].open > 0 ? stats[cat].open : stats[cat].total;
-          if (val <= 0) return;
-          const seg = document.createElement('div');
-          seg.className = 'avail-seg';
-          seg.style.width = `${(val / denom) * 100}%`;
-          seg.style.backgroundColor = CATEGORY_COLORS[cat] || '#EA5828';
-          seg.style.opacity = (appState.prefs.category === '全部' || appState.prefs.category === cat) ? '1' : '0.28';
-          seg.title = `${cat}：${stats[cat].open}/${stats[cat].total} 營業中`;
-          seg.onclick = () => {
-            appState.prefs.category = appState.prefs.category === cat ? '全部' : cat;
-            persistPrefs();
-            renderHomeDashboard();
-          };
-          stackBar.appendChild(seg);
-        });
-      }
-
-      // 3×2 等寬單選品項網格（絕無重疊裁切）
       const catGrid = document.getElementById('homeCategoryGrid');
       if (catGrid) {
         catGrid.innerHTML = '';
@@ -1252,6 +1357,7 @@
           const emptyUnderOpen = appState.prefs.onlyOpen && st.open === 0;
           const ratio = st.total > 0 ? Math.round((st.open / st.total) * 100) : 0;
           const color = CATEGORY_COLORS[cat] || '#EA5828';
+          const iconSvg = CATEGORY_ICONS[cat] || '';
 
           const btn = document.createElement('button');
           btn.type = 'button';
@@ -1259,13 +1365,13 @@
           btn.setAttribute('role', 'radio');
           btn.setAttribute('aria-checked', String(active));
           btn.innerHTML = `
-            <div class="cat-card-top">
-              <span class="cat-card-name">${escapeHtml(cat)}</span>
-              <span class="cat-swatch" style="background:${color};"></span>
+            <div class="cat-icon-row">
+              <span class="cat-icon-wrap" style="color:${color};">${iconSvg}</span>
+              <span class="cat-count-badge">${appState.prefs.onlyOpen ? `${st.open}/${st.total}` : `${st.total} 間`}</span>
             </div>
-            <div class="cat-card-count">${appState.prefs.onlyOpen ? `${st.open}/${st.total} 營業` : `${st.total} 間全部`}</div>
+            <span class="cat-card-name">${escapeHtml(cat)}</span>
             <div class="cat-mini-track">
-              <div class="cat-mini-fill" style="width:${ratio}%;background:${color};"></div>
+              <div class="cat-mini-fill" style="width:${appState.prefs.onlyOpen ? ratio : 100}%;background:${color};"></div>
             </div>
           `;
           btn.onclick = () => {
@@ -1277,18 +1383,22 @@
         });
       }
 
-      // 2. 49 間口袋探索點陣圖（7×7 Waffle Matrix）
+      // Bento 下卡：49 格星圖 ⇄ 飲食統計雙切卡
+      document.querySelectorAll('.sub-tab').forEach(btn => {
+        btn.classList.toggle('is-active', btn.dataset.subtab === appState.homeSubTab);
+      });
+      const matrixPane = document.getElementById('matrixPane');
+      const statsPane = document.getElementById('statsPane');
+      if (matrixPane) matrixPane.hidden = appState.homeSubTab !== 'matrix';
+      if (statsPane) statsPane.hidden = appState.homeSubTab !== 'stats';
+
       const visitedPlaces = allPlaces.filter(p => Boolean(p.historyRec));
-      const explorePct = document.getElementById('homeExplorePct');
       const exploreKpi = document.getElementById('homeExploreKpi');
       const matrixEl = document.getElementById('exploreMatrix');
       const matrixTip = document.getElementById('matrixTip');
 
-      if (explorePct) {
-        explorePct.textContent = `${Math.round((visitedPlaces.length / Math.max(1, allPlaces.length)) * 100)}%`;
-      }
       if (exploreKpi) {
-        exploreKpi.innerHTML = `${visitedPlaces.length} <span>/ ${allPlaces.length} 間</span>`;
+        exploreKpi.textContent = `已解鎖 ${visitedPlaces.length}/${allPlaces.length}`;
       }
 
       if (matrixEl) {
@@ -1307,7 +1417,7 @@
             appState.selectedMatrixKey = key;
             if (matrixTip) {
               const openTxt = p.openStatus.state === 'open' ? p.openStatus.todayText : p.openStatus.label;
-              const visitTxt = p.historyRec ? `已吃過 ${p.historyRec.count} 次` : '尚未探索';
+              const visitTxt = p.historyRec ? `吃過 ${p.historyRec.count} 次` : '尚未解鎖';
               matrixTip.textContent = `${p.name} · ${p.category} · ${openTxt}（${visitTxt}）`;
             }
             matrixEl.querySelectorAll('.matrix-cell').forEach(el => el.classList.remove('is-selected'));
@@ -1317,7 +1427,7 @@
         });
       }
 
-      // 3. 近期吃過紀錄與分類偏好比例
+      // 分類飲食統計與近期紀錄
       const placeByKey = new Map();
       allPlaces.forEach(p => placeByKey.set(placeKey(p), p));
 
@@ -1326,17 +1436,13 @@
         .sort((a, b) => (b.lastAteAt || 0) - (a.lastAteAt || 0));
 
       const totalMeals = historyList.reduce((acc, r) => acc + (r.count || 0), 0);
-      const historyTotalEl = document.getElementById('homeHistoryTotal');
       const prefBarsEl = document.getElementById('homePrefBars');
-      const recentDivider = document.getElementById('recentDivider');
       const recentListEl = document.getElementById('homeRecentList');
-
-      if (historyTotalEl) historyTotalEl.textContent = `${totalMeals} 次紀錄`;
 
       if (prefBarsEl && recentListEl) {
         if (totalMeals === 0) {
-          prefBarsEl.innerHTML = `<p class="history-empty">尚無用餐紀錄 — 前往衛星畫面抽中並點擊「出發去吃」後，系統會自動統計分類偏好與近期避重清單。</p>`;
-          if (recentDivider) recentDivider.hidden = true;
+          prefBarsEl.innerHTML = `<p class="history-empty">尚無用餐紀錄 — 前往衛星畫面抽中並點擊「出發去吃」後，系統會自動統計各分類比例與近期吃過的避重清單。</p>`;
+          recentListEl.hidden = true;
           recentListEl.innerHTML = '';
         } else {
           const catMeals = {};
@@ -1365,8 +1471,8 @@
             `;
           }).join('');
 
-          if (recentDivider) recentDivider.hidden = false;
-          recentListEl.innerHTML = historyList.slice(0, 4).map(rec => {
+          recentListEl.hidden = false;
+          recentListEl.innerHTML = historyList.slice(0, 3).map(rec => {
             const matched = placeByKey.get(rec.key) || allPlaces.find(p => p.name === rec.name);
             const cat = matched ? matched.category : '口袋名單';
             return `
@@ -1379,21 +1485,25 @@
         }
       }
 
-      // 4. 更新主按鈕候選數與狀態
-      const matchedCount = getCandidates().length;
+      // 底部動態圓盤啟動器狀態
       const enterBtn = document.getElementById('enterMapBtn');
       const enterMain = document.getElementById('enterMapBtnMain');
       const enterSub = document.getElementById('enterMapBtnSub');
+      const dialCatVal = document.getElementById('dialCatVal');
+      const dialOpenVal = document.getElementById('dialOpenVal');
+
+      if (dialCatVal) dialCatVal.textContent = appState.prefs.category;
+      if (dialOpenVal) dialOpenVal.textContent = appState.prefs.onlyOpen ? '只抽營業中' : '不限時段';
 
       if (enterBtn && enterMain && enterSub) {
         if (matchedCount > 0) {
           enterBtn.classList.remove('is-warn');
-          enterMain.textContent = '前往衛星選餐廳';
-          enterSub.textContent = `${appState.prefs.category} · ${matchedCount} 間 ➔`;
+          enterMain.textContent = '出發選餐';
+          enterSub.textContent = `${matchedCount} 間`;
         } else {
           enterBtn.classList.add('is-warn');
-          enterMain.textContent = '目前時段無營業中店家';
-          enterSub.textContent = '改為不限時段 ➔';
+          enterMain.textContent = '改不限時';
+          enterSub.textContent = '0 間';
         }
       }
     }
@@ -1934,22 +2044,493 @@
       }, { passive: false });
     }
 
+    // ==================== Toast 與本機／GAS 雲端保存 ====================
+    function showToast(message) {
+      const el = document.getElementById('appToast');
+      if (!el) return;
+      el.textContent = message;
+      el.classList.add('is-show');
+      if (appState.toastTimer) clearTimeout(appState.toastTimer);
+      appState.toastTimer = setTimeout(() => {
+        el.classList.remove('is-show');
+      }, 2200);
+    }
+
+    function persistCustomPlaces() {
+      appState.hasLocalEdits = true;
+      saveJson(CUSTOM_PLACES_KEY, {
+        places: appState.places,
+        updatedAt: new Date().toISOString()
+      });
+    }
+
+    async function postGasAction(payload) {
+      const url = (appState.gasConfig.url || '').trim();
+      const token = (appState.gasConfig.token || '').trim();
+      if (!url || !token) return { skipped: true };
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ ...payload, token })
+      });
+      const data = await res.json();
+      if (!data || !data.ok) {
+        throw new Error((data && data.error) || 'SYNC_FAILED');
+      }
+      return data;
+    }
+
+    async function syncMutationInBackground(payload, localOkMsg) {
+      if (!appState.gasConfig.url || !appState.gasConfig.token) {
+        showToast(localOkMsg);
+        return;
+      }
+      showToast(`${localOkMsg}，同步雲端中…`);
+      try {
+        const res = await postGasAction(payload);
+        // 若雲端 GAS 自動展開短網址抓回精準座標，同步補回本機
+        if (payload.action === 'upsert' && payload.place && Number.isFinite(Number(res.lat)) && Number.isFinite(Number(res.lng))) {
+          const target = appState.places.find(p => p.id === payload.place.id);
+          if (target && (!Number.isFinite(target.lat) || !Number.isFinite(target.lng))) {
+            target.lat = Number(res.lat);
+            target.lng = Number(res.lng);
+            persistCustomPlaces();
+            if (appState.screen === 'manage') renderManageList();
+          }
+        }
+        showToast('已儲存並同步至 Google Sheets');
+      } catch (_) {
+        showToast(`${localOkMsg}（雲端同步失敗，已保留本機修改）`);
+      }
+    }
+
+    function generateNextPlaceId() {
+      let maxNum = 0;
+      appState.places.forEach(p => {
+        const m = String(p.id || '').match(/^p(\d+)$/i);
+        if (m) maxNum = Math.max(maxNum, Number(m[1]));
+      });
+      return `p${String(maxNum + 1).padStart(2, '0')}`;
+    }
+
+    // ==================== PAGE 3：口袋名單管理頁 ====================
+    const MANAGE_DAY_DEFS = [
+      { key: 'mon', label: '週一' },
+      { key: 'tue', label: '週二' },
+      { key: 'wed', label: '週三' },
+      { key: 'thu', label: '週四' },
+      { key: 'fri', label: '週五' },
+      { key: 'sat', label: '週六' },
+      { key: 'sun', label: '週日' }
+    ];
+
+    function openManageScreen() {
+      clearAnimations();
+      appState.screen = 'manage';
+      document.body.setAttribute('data-screen', 'manage');
+      renderManageList();
+    }
+
+    function renderManageList() {
+      const allEnriched = getAllEnrichedPlaces(true);
+      const countBadge = document.getElementById('manageCountBadge');
+      const enabledCount = allEnriched.filter(p => p.enabled !== false).length;
+      if (countBadge) {
+        countBadge.textContent = enabledCount === allEnriched.length
+          ? `${allEnriched.length} 間`
+          : `${enabledCount}/${allEnriched.length} 啟用`;
+      }
+
+      const filterRow = document.getElementById('manageFilterRow');
+      const manageFilters = [...CATEGORIES, '已停用'];
+      if (filterRow) {
+        filterRow.innerHTML = '';
+        manageFilters.forEach(f => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = `m-filter-pill ${appState.manageFilter === f ? 'is-active' : ''}`;
+          btn.textContent = f;
+          btn.onclick = () => {
+            appState.manageFilter = f;
+            renderManageList();
+          };
+          filterRow.appendChild(btn);
+        });
+      }
+
+      const kw = (appState.manageSearch || '').trim().toLowerCase();
+      const filtered = allEnriched.filter(p => {
+        if (appState.manageFilter === '已停用') {
+          if (p.enabled !== false) return false;
+        } else if (appState.manageFilter !== '全部') {
+          if (p.category !== appState.manageFilter) return false;
+        }
+        if (kw) {
+          const hay = `${p.name} ${p.category} ${p.note || ''}`.toLowerCase();
+          if (!hay.includes(kw)) return false;
+        }
+        return true;
+      });
+
+      const listEl = document.getElementById('manageList');
+      if (!listEl) return;
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = `<div class="manage-empty">找不到符合條件的店家，可換個關鍵字或點右上角「＋ 新增」。</div>`;
+        return;
+      }
+
+      listEl.innerHTML = '';
+      filtered.forEach(p => {
+        const isOn = p.enabled !== false;
+        const color = CATEGORY_COLORS[p.category] || '#EA5828';
+        const hasCoords = Number.isFinite(p.lat) && Number.isFinite(p.lng);
+        const openTxt = p.openStatus.state === 'open' ? p.openStatus.todayText : p.openStatus.label;
+
+        const row = document.createElement('div');
+        row.className = `store-row ${isOn ? '' : 'is-disabled'}`.trim();
+        row.innerHTML = `
+          <div class="store-row-info">
+            <div class="store-row-head">
+              <span class="store-dot" style="background:${color};"></span>
+              <span class="store-row-name">${escapeHtml(p.name)}</span>
+              ${isOn ? '' : '<span class="store-muted-tag">已停用</span>'}
+            </div>
+            <div class="store-row-sub">${escapeHtml(p.category)} · ${escapeHtml(p.note || '無備註')} · ${escapeHtml(openTxt)}${hasCoords ? '' : ' · 未設座標'}</div>
+          </div>
+          <div class="store-row-controls">
+            <button type="button" class="mini-switch ${isOn ? 'is-on' : ''}" role="switch" aria-checked="${isOn}" aria-label="切換啟用 ${escapeHtml(p.name)}"></button>
+            <button type="button" class="row-edit-btn">編輯</button>
+          </div>
+        `;
+
+        const switchBtn = row.querySelector('.mini-switch');
+        switchBtn.onclick = () => {
+          const target = appState.places.find(item => placeKey(item) === placeKey(p));
+          if (!target) return;
+          target.enabled = target.enabled === false;
+          persistCustomPlaces();
+          renderManageList();
+          syncMutationInBackground(
+            { action: 'upsert', place: target },
+            target.enabled ? `已啟用「${target.name}」` : `已暫停「${target.name}」`
+          );
+        };
+
+        const editBtn = row.querySelector('.row-edit-btn');
+        editBtn.onclick = () => {
+          const rawPlace = appState.places.find(item => placeKey(item) === placeKey(p)) || p;
+          openEditorModal(rawPlace);
+        };
+
+        listEl.appendChild(row);
+      });
+    }
+
+    // ==================== 彈出抽屜 1：新增／編輯餐廳 ====================
+    function renderEditorCategories() {
+      const catRow = document.getElementById('editCatRow');
+      if (!catRow) return;
+      catRow.innerHTML = '';
+      CATEGORIES.slice(1).forEach(cat => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `cat-pick-btn ${appState.editingCategory === cat ? 'is-active' : ''}`;
+        btn.textContent = cat;
+        btn.onclick = () => {
+          appState.editingCategory = cat;
+          renderEditorCategories();
+        };
+        catRow.appendChild(btn);
+      });
+    }
+
+    function renderEditorHours(hoursObj = {}) {
+      const grid = document.getElementById('editHoursGrid');
+      if (!grid) return;
+      grid.innerHTML = '';
+      MANAGE_DAY_DEFS.forEach(({ key, label }) => {
+        const val = hoursObj[key] || '';
+        const isRest = val === '休';
+        const row = document.createElement('div');
+        row.className = 'hour-row';
+        row.innerHTML = `
+          <span class="hour-day">${label}</span>
+          <input type="text" class="field-input hour-input" data-day="${key}" value="${escapeHtml(val)}" placeholder="11:00-20:00 或 休" />
+          <button type="button" class="hour-rest-btn ${isRest ? 'is-rest' : ''}" data-day="${key}">休</button>
+        `;
+        const input = row.querySelector('.hour-input');
+        const restBtn = row.querySelector('.hour-rest-btn');
+        input.oninput = () => {
+          restBtn.classList.toggle('is-rest', input.value.trim() === '休');
+        };
+        restBtn.onclick = () => {
+          if (input.value.trim() === '休') {
+            input.value = '';
+            restBtn.classList.remove('is-rest');
+          } else {
+            input.value = '休';
+            restBtn.classList.add('is-rest');
+          }
+        };
+        grid.appendChild(row);
+      });
+    }
+
+    function updateEditorEnabledSwitch() {
+      const sw = document.getElementById('editEnabledToggle');
+      if (!sw) return;
+      sw.classList.toggle('is-on', appState.editingEnabled);
+      sw.setAttribute('aria-checked', String(appState.editingEnabled));
+    }
+
+    function openEditorModal(place = null) {
+      const modal = document.getElementById('editorModal');
+      const titleEl = document.getElementById('editorTitle');
+      const delBtn = document.getElementById('deletePlaceBtn');
+      const saveBtn = document.getElementById('savePlaceBtn');
+      const feedback = document.getElementById('parseFeedback');
+
+      appState.editingPlaceId = place ? placeKey(place) : null;
+      appState.editingCategory = (place && CATEGORIES.includes(place.category) && place.category !== '全部')
+        ? place.category
+        : '便當飯類';
+      appState.editingEnabled = place ? place.enabled !== false : true;
+      appState.deleteArmed = false;
+
+      if (titleEl) titleEl.textContent = place ? '編輯餐廳' : '新增餐廳';
+      if (saveBtn) saveBtn.textContent = place ? '儲存變更' : '新增至口袋名單';
+      if (delBtn) {
+        delBtn.hidden = !place;
+        delBtn.classList.remove('is-confirm');
+        delBtn.textContent = '刪除店家';
+      }
+      if (feedback) {
+        feedback.textContent = '';
+        feedback.classList.remove('is-warn');
+      }
+
+      document.getElementById('editMapsPaste').value = '';
+      document.getElementById('editName').value = place ? (place.name || '') : '';
+      document.getElementById('editNote').value = place ? (place.note || '') : '';
+      document.getElementById('editLat').value = (place && Number.isFinite(place.lat)) ? String(place.lat) : '';
+      document.getElementById('editLng').value = (place && Number.isFinite(place.lng)) ? String(place.lng) : '';
+      document.getElementById('editMapsUrl').value = place ? (place.maps_url || '') : '';
+      document.getElementById('quickHoursInput').value = '';
+
+      renderEditorCategories();
+      updateEditorEnabledSwitch();
+      renderEditorHours(place ? (place.hours || {}) : {});
+
+      if (modal) {
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+      }
+    }
+
+    function closeEditorModal() {
+      const modal = document.getElementById('editorModal');
+      if (modal) {
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+      }
+      appState.deleteArmed = false;
+    }
+
+    function handleParseMapsPaste() {
+      const raw = document.getElementById('editMapsPaste').value;
+      const feedback = document.getElementById('parseFeedback');
+      const parsed = parseGoogleMapsInput(raw);
+      const nameInput = document.getElementById('editName');
+      const latInput = document.getElementById('editLat');
+      const lngInput = document.getElementById('editLng');
+      const urlInput = document.getElementById('editMapsUrl');
+
+      if (!parsed.name && !parsed.maps_url && !Number.isFinite(parsed.lat)) {
+        feedback.textContent = '未偵測到有效 Google Maps 資訊，請貼上完整分享內容。';
+        feedback.classList.add('is-warn');
+        return;
+      }
+
+      if (parsed.name) nameInput.value = parsed.name;
+      if (Number.isFinite(parsed.lat)) latInput.value = String(parsed.lat);
+      if (Number.isFinite(parsed.lng)) lngInput.value = String(parsed.lng);
+      if (parsed.maps_url) urlInput.value = parsed.maps_url;
+
+      if (Number.isFinite(parsed.lat) && Number.isFinite(parsed.lng)) {
+        feedback.textContent = `✔ 已帶入「${parsed.name || '座標'}」(${parsed.lat.toFixed(4)}, ${parsed.lng.toFixed(4)})`;
+        feedback.classList.remove('is-warn');
+      } else {
+        feedback.textContent = '✔ 已帶入連結（短網址不含明碼座標，可手動填寫經緯度或透過雲端 GAS 自動展開）';
+        feedback.classList.add('is-warn');
+      }
+    }
+
+    function saveEditorPlace() {
+      const name = document.getElementById('editName').value.trim();
+      if (!name) {
+        showToast('請輸入餐廳名稱');
+        document.getElementById('editName').focus();
+        return;
+      }
+
+      const latRaw = document.getElementById('editLat').value.trim();
+      const lngRaw = document.getElementById('editLng').value.trim();
+      const lat = latRaw !== '' && Number.isFinite(Number(latRaw)) ? Number(latRaw) : null;
+      const lng = lngRaw !== '' && Number.isFinite(Number(lngRaw)) ? Number(lngRaw) : null;
+      const note = document.getElementById('editNote').value.trim();
+      let mapsUrl = document.getElementById('editMapsUrl').value.trim();
+      if (!mapsUrl) {
+        mapsUrl = (Number.isFinite(lat) && Number.isFinite(lng))
+          ? `https://maps.google.com/?q=${lat},${lng}`
+          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`;
+      }
+
+      const hours = {};
+      document.querySelectorAll('#editHoursGrid .hour-input').forEach(inp => {
+        hours[inp.dataset.day] = inp.value.trim();
+      });
+
+      const isEdit = Boolean(appState.editingPlaceId);
+      let savedPlace = null;
+
+      if (isEdit) {
+        const idx = appState.places.findIndex(p => placeKey(p) === appState.editingPlaceId);
+        if (idx >= 0) {
+          savedPlace = {
+            ...appState.places[idx],
+            name,
+            category: appState.editingCategory,
+            lat,
+            lng,
+            hours,
+            maps_url: mapsUrl,
+            note,
+            enabled: appState.editingEnabled
+          };
+          appState.places[idx] = savedPlace;
+        }
+      }
+
+      if (!savedPlace) {
+        savedPlace = {
+          id: generateNextPlaceId(),
+          name,
+          category: appState.editingCategory,
+          rating: null,
+          reviews: null,
+          lat,
+          lng,
+          hours,
+          maps_url: mapsUrl,
+          note,
+          enabled: appState.editingEnabled
+        };
+        appState.places.unshift(savedPlace);
+      }
+
+      persistCustomPlaces();
+      closeEditorModal();
+      renderManageList();
+      renderHomeDashboard();
+      syncMutationInBackground(
+        { action: 'upsert', place: savedPlace },
+        isEdit ? `已更新「${savedPlace.name}」` : `已新增「${savedPlace.name}」`
+      );
+    }
+
+    function handleDeletePlace() {
+      const delBtn = document.getElementById('deletePlaceBtn');
+      if (!appState.editingPlaceId) return;
+
+      if (!appState.deleteArmed) {
+        appState.deleteArmed = true;
+        delBtn.classList.add('is-confirm');
+        delBtn.textContent = '再點確認刪除';
+        setTimeout(() => {
+          if (appState.deleteArmed) {
+            appState.deleteArmed = false;
+            delBtn.classList.remove('is-confirm');
+            delBtn.textContent = '刪除店家';
+          }
+        }, 3500);
+        return;
+      }
+
+      const idx = appState.places.findIndex(p => placeKey(p) === appState.editingPlaceId);
+      if (idx < 0) return;
+      const [removed] = appState.places.splice(idx, 1);
+      persistCustomPlaces();
+      closeEditorModal();
+      renderManageList();
+      renderHomeDashboard();
+      syncMutationInBackground(
+        { action: 'delete', id: removed.id || removed.name },
+        `已刪除「${removed.name}」`
+      );
+    }
+
+    // ==================== 彈出抽屜 2：雲端同步與 CSV 匯出 ====================
+    function buildFullCsvText() {
+      const header = 'id,name,category,rating,reviews,lat,lng,mon,tue,wed,thu,fri,sat,sun,maps_url,note,enabled';
+      const rows = appState.places.map(placeToCsvRow);
+      return `\uFEFF${[header, ...rows].join('\r\n')}`;
+    }
+
+    function openSyncModal() {
+      const modal = document.getElementById('syncModal');
+      document.getElementById('gasUrlInput').value = appState.gasConfig.url || '';
+      document.getElementById('gasTokenInput').value = appState.gasConfig.token || '';
+      const statusEl = document.getElementById('gasStatusText');
+      if (statusEl) {
+        statusEl.textContent = appState.gasConfig.url ? '已設定雲端同步網址' : '';
+        statusEl.classList.remove('is-err');
+      }
+      const resetBtn = document.getElementById('resetDefaultBtn');
+      if (resetBtn) {
+        appState.resetArmed = false;
+        resetBtn.classList.remove('is-confirm');
+        resetBtn.textContent = '重設回預設 49 間';
+      }
+      if (modal) {
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+      }
+    }
+
+    function closeSyncModal() {
+      const modal = document.getElementById('syncModal');
+      if (modal) {
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+      }
+    }
+
     // ==================== 背景同步與 GPS ====================
-    async function backgroundSync() {
+    async function backgroundSync(forcePull = false) {
+      if (!forcePull && appState.hasLocalEdits) return false;
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
       try {
         const res = await fetch(`${DEFAULT_SHEET_CSV_URL}&_t=${Date.now()}`, { signal: controller.signal, cache: 'no-store' });
-        if (!res.ok) return;
+        if (!res.ok) return false;
         const text = await res.text();
         const parsed = csvToPlaces(text);
         if (parsed.length > 0) {
           appState.places = parsed;
+          if (forcePull) {
+            appState.hasLocalEdits = false;
+            try { localStorage.removeItem(CUSTOM_PLACES_KEY); } catch (_) {}
+          }
           saveJson(STORAGE_KEYS.placesCache, { places: parsed, syncedAt: new Date().toISOString() });
-          if (appState.screen === 'home') renderHomeDashboard();
+          renderHomeDashboard();
+          if (appState.screen === 'manage') renderManageList();
+          return true;
         }
+        return false;
       } catch (_) {
-        // silent offline fallback
+        return false;
       } finally {
         clearTimeout(timer);
       }
@@ -1962,7 +2543,7 @@
           appState.userLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude, hasGps: true };
           if (appState.screen === 'home') {
             renderHomeDashboard();
-          } else if (!appState.isAnimating && appState.currentPick) {
+          } else if (appState.screen === 'map' && !appState.isAnimating && appState.currentPick) {
             const refreshed = getCandidates().find(c => placeKey(c) === placeKey(appState.currentPick));
             if (refreshed) {
               appState.currentPick = refreshed;
@@ -1978,13 +2559,32 @@
 
     // ==================== 事件綁定與啟動 ====================
     // Page 1：主畫面事件
-    document.getElementById('homeOpenToggle').onclick = () => {
+    const toggleHomeOpen = () => {
       appState.prefs.onlyOpen = !appState.prefs.onlyOpen;
       persistPrefs();
       renderHomeDashboard();
     };
 
-    document.getElementById('enterMapBtn').onclick = openMapScreen;
+    document.getElementById('homeOpenToggle').onclick = toggleHomeOpen;
+    const openRingCard = document.getElementById('openRingCard');
+    if (openRingCard) openRingCard.onclick = toggleHomeOpen;
+    const dialOpenSideBtn = document.getElementById('dialOpenSideBtn');
+    if (dialOpenSideBtn) dialOpenSideBtn.onclick = toggleHomeOpen;
+
+    const openManageBtn = document.getElementById('openManageBtn');
+    if (openManageBtn) openManageBtn.onclick = openManageScreen;
+
+    const teaserCard = document.getElementById('teaserCard');
+    if (teaserCard) teaserCard.onclick = shuffleTeaserCard;
+
+    document.querySelectorAll('.sub-tab').forEach(btn => {
+      btn.onclick = () => {
+        appState.homeSubTab = btn.dataset.subtab;
+        renderHomeDashboard();
+      };
+    });
+
+    document.getElementById('enterMapBtn').onclick = launchFromDial;
 
     // Page 2：衛星俯視抽籤畫面事件
     document.getElementById('backToHomeBtn').onclick = openHomeScreen;
@@ -2018,6 +2618,141 @@
     document.getElementById('redrawBtn').onclick = () => triggerDraw(true, true);
     document.getElementById('goEatBtn').onclick = goEatCurrent;
 
+    // Page 3：名單管理與編輯抽屜事件
+    document.getElementById('manageBackBtn').onclick = openHomeScreen;
+    document.getElementById('openAddBtn').onclick = () => openEditorModal(null);
+    document.getElementById('openSyncBtn').onclick = openSyncModal;
+    document.getElementById('manageSearchInput').oninput = e => {
+      appState.manageSearch = e.target.value;
+      renderManageList();
+    };
+
+    document.getElementById('closeEditorBtn').onclick = closeEditorModal;
+    document.getElementById('editorModal').onclick = e => {
+      if (e.target.id === 'editorModal') closeEditorModal();
+    };
+    document.getElementById('parseMapsBtn').onclick = handleParseMapsPaste;
+    document.getElementById('editEnabledToggle').onclick = () => {
+      appState.editingEnabled = !appState.editingEnabled;
+      updateEditorEnabledSwitch();
+    };
+    document.getElementById('applyAllWeekBtn').onclick = () => {
+      const val = document.getElementById('quickHoursInput').value.trim();
+      if (!val) return showToast('請先輸入要套用的營業時間');
+      document.querySelectorAll('#editHoursGrid .hour-input').forEach(inp => {
+        inp.value = val;
+        const btn = document.querySelector(`#editHoursGrid .hour-rest-btn[data-day="${inp.dataset.day}"]`);
+        if (btn) btn.classList.toggle('is-rest', val === '休');
+      });
+      showToast('已套用至週一～週日');
+    };
+    document.getElementById('applyWeekdaysBtn').onclick = () => {
+      const val = document.getElementById('quickHoursInput').value.trim();
+      if (!val) return showToast('請先輸入要套用的營業時間');
+      ['mon', 'tue', 'wed', 'thu', 'fri'].forEach(day => {
+        const inp = document.querySelector(`#editHoursGrid .hour-input[data-day="${day}"]`);
+        const btn = document.querySelector(`#editHoursGrid .hour-rest-btn[data-day="${day}"]`);
+        if (inp) inp.value = val;
+        if (btn) btn.classList.toggle('is-rest', val === '休');
+      });
+      showToast('已套用至週一～週五');
+    };
+    document.getElementById('savePlaceBtn').onclick = saveEditorPlace;
+    document.getElementById('deletePlaceBtn').onclick = handleDeletePlace;
+
+    // 雲端同步與 CSV 匯出抽屜事件
+    document.getElementById('closeSyncBtn').onclick = closeSyncModal;
+    document.getElementById('syncModal').onclick = e => {
+      if (e.target.id === 'syncModal') closeSyncModal();
+    };
+    document.getElementById('downloadCsvBtn').onclick = () => {
+      const blob = new Blob([buildFullCsvText()], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'places_sheet.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('已下載 places_sheet.csv');
+    };
+    document.getElementById('copyCsvBtn').onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(buildFullCsvText());
+        showToast('已複製完整 CSV 至剪貼簿');
+      } catch (_) {
+        showToast('複製失敗，請改用下載 CSV 檔');
+      }
+    };
+    document.getElementById('saveGasBtn').onclick = async () => {
+      const url = document.getElementById('gasUrlInput').value.trim();
+      const token = document.getElementById('gasTokenInput').value.trim();
+      const statusEl = document.getElementById('gasStatusText');
+      appState.gasConfig = { url, token };
+      saveJson(GAS_CONFIG_KEY, appState.gasConfig);
+      if (!url || !token) {
+        statusEl.textContent = '已清除雲端設定，目前僅本機儲存';
+        statusEl.classList.remove('is-err');
+        return;
+      }
+      statusEl.textContent = '正在測試連線…';
+      statusEl.classList.remove('is-err');
+      try {
+        const res = await postGasAction({ action: 'ping' });
+        statusEl.textContent = `✔ 連線成功！試算表目前有 ${res.rows} 筆資料`;
+        showToast('Google Sheets 雙向同步已啟用');
+      } catch (err) {
+        statusEl.textContent = `連線失敗：${err.message || '請檢查網址與密鑰'}`;
+        statusEl.classList.add('is-err');
+      }
+    };
+    document.getElementById('pushGasBtn').onclick = async () => {
+      const statusEl = document.getElementById('gasStatusText');
+      if (!appState.gasConfig.url || !appState.gasConfig.token) {
+        statusEl.textContent = '請先填寫並儲存 Apps Script 網址與密鑰';
+        statusEl.classList.add('is-err');
+        return;
+      }
+      statusEl.textContent = '正在推送整份名單至 Google Sheets…';
+      statusEl.classList.remove('is-err');
+      try {
+        const res = await postGasAction({ action: 'sync_all', places: appState.places });
+        statusEl.textContent = `✔ 已將 ${res.synced} 間店家完整寫入 Google Sheets`;
+        showToast('已同步整份名單上雲端');
+      } catch (err) {
+        statusEl.textContent = `推送失敗：${err.message}`;
+        statusEl.classList.add('is-err');
+      }
+    };
+    document.getElementById('pullSheetBtn').onclick = async () => {
+      const ok = await backgroundSync(true);
+      showToast(ok ? '已從 Google Sheets 重新拉取最新名單' : '拉取失敗，請確認網路連線');
+      if (ok) closeSyncModal();
+    };
+    document.getElementById('resetDefaultBtn').onclick = () => {
+      const btn = document.getElementById('resetDefaultBtn');
+      if (!appState.resetArmed) {
+        appState.resetArmed = true;
+        btn.classList.add('is-confirm');
+        btn.textContent = '再點確認重設';
+        setTimeout(() => {
+          if (appState.resetArmed) {
+            appState.resetArmed = false;
+            btn.classList.remove('is-confirm');
+            btn.textContent = '重設回預設 49 間';
+          }
+        }, 3500);
+        return;
+      }
+      appState.places = DEFAULT_PLACES.map(p => ({ ...p, hours: { ...(p.hours || {}) } }));
+      appState.hasLocalEdits = false;
+      try { localStorage.removeItem(CUSTOM_PLACES_KEY); } catch (_) {}
+      appState.resetArmed = false;
+      closeSyncModal();
+      renderManageList();
+      renderHomeDashboard();
+      showToast('已重設回內建 49 間預設名單');
+    };
+
     if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
       navigator.serviceWorker.register('./sw.js').catch(() => {});
     }
@@ -2031,11 +2766,13 @@
 
     if (appState.screen === 'map') {
       renderMapOverviewReady();
+    } else if (appState.screen === 'manage') {
+      renderManageList();
     }
 
     startRenderLoop();
     requestGps();
-    backgroundSync();
+    backgroundSync(false);
   }
 
   const exported = {

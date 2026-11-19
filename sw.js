@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meal-picker-shell-v6';
+const CACHE_NAME = 'meal-picker-shell-v8';
 const SHELL_ASSETS = [
   './',
   './index.html',

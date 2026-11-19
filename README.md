@@ -1,23 +1,55 @@
-# Meal Picker（今天吃什麼｜雙畫面數據主頁 × 俯視衛星圖輪轉 PWA）
+# Meal Picker（今天吃什麼｜Bento 數據主頁 × 衛星俯視輪轉 × 口袋名單管理 PWA）
 
-專為 iPhone 打造的**極簡吃飯抽籤 PWA**。採「**主畫面（圖表洞察 ＋ 抽前選品項） $\rightarrow$ 俯視衛星圖輪轉畫面**」兩段式流程：先在主畫面掌握目前時段各分類營業狀況與 49 間口袋名單探索進度、選好想吃的品項，再按下主按鈕進入全螢幕衛星俯視畫面進行縮放輪轉抽籤，點擊「出發去吃」直接喚醒 Google Maps App 導航。
+專為 iPhone 打造的**極簡吃飯抽籤 PWA**。採三段式全螢幕體驗：
+1. **Bento 互動主頁**：動態 SVG 即時營業進度環、互動「今日靈感盲盒」、圖示化 3×2 品項卡片牆、49 格探索星圖 ⇄ 飲食統計雙切卡，以及底部動態衛星羅盤圓盤啟動器。
+2. **俯視衛星圖縮放輪轉頁**：先停於全區衛星俯視鳥瞰待命，點擊「開始衛星輪轉」即執行「縮小地圖 (`Z14.5`) $\rightarrow$ 跨街區跳轉 $\rightarrow$ 放大衛星圖聚焦屋頂 (`Z17.4`) $\rightarrow$ 再縮小跳轉下一間 $\rightarrow$ 最終鎖定 (`Z17.6`)」，點擊「出發去吃」直接喚醒 Google Maps App 導航。
+3. **口袋名單管理頁**：支援搜尋篩選、一鍵啟用／停用、貼上 Google Maps 分享文字自動擷取店名與座標、快速套用營業時間、安全刪除，並支援本機即時保存、CSV 匯出與 Google Apps Script 雙向雲端同步。
 
 - **線上版（GitHub Pages）**：https://berton0310.github.io/meal-picker/
 - **口袋名單試算表（Google Sheets）**：https://docs.google.com/spreadsheets/d/1Fi_2OYvhbuii5sqEGOT5n5EWnjiYqSi-6nlnPFzBp7g/edit
 
 ---
 
-## 雙畫面核心體驗
+## 目錄結構
 
-### 1. 主畫面（Home）
-- **即時營業分佈 ＋ 單選分類**：堆疊條呈現當下各分類營業比例，6 格等寬卡片顯示各品項營業數並支援單選，右上角可切換「只抽營業中／不限時段」。
-- **49 間口袋探索點陣圖（7×7 Matrix）**：呈現已解鎖吃過、營業中待探索與休息中店家，點擊任一方格可查看該店即時狀態。
-- **近期飲食偏好與紀錄**：依據「出發去吃」真實紀錄統計各分類比例與最近吃過清單（自動冷卻避免重複）。
-- **底部主按鈕**：顯示當前條件符合店數，一鍵前往衛星俯視選餐廳畫面。
+```text
+meal-picker/
+├── index.html                      # 三畫面主介面（Bento 主頁 / 衛星輪轉 / 名單管理與抽屜）
+├── app.js                          # Web Mercator 圖磚引擎、縮放輪轉運鏡、名單 CRUD 與同步
+├── manifest.json                   # PWA 全螢幕設定
+├── sw.js                           # Service Worker 離線快取（v8）
+├── assets/
+│   ├── icon.svg                    # 向量 App Icon
+│   ├── icon-180.png                # iOS apple-touch-icon
+│   └── icon-512.png                # PWA Icon
+├── data/
+│   ├── raw_places_source.json      # 原始 Google Maps 清單（49 間店）
+│   ├── places_enriched.json        # Google Maps MCP 補齊資料
+│   ├── places_normalized.json      # 正規化 JSON（座標 49/49、時段 48/49）
+│   └── places_sheet.csv            # Google Sheets 匯入用表格
+├── scripts/
+│   ├── normalize_places.py         # 資料正規化腳本
+│   ├── verify_logic.mjs            # 核心邏輯單元測試（12 項檢查）
+│   └── google_apps_script.gs       # 免費 Google Sheets 雙向寫回 Web App 腳本（選用）
+├── PLAN.md                         # 開發計畫
+└── README.md                       # 專案說明與 iPhone 安裝指南
+```
 
-### 2. 衛星俯視輪轉畫面（Map Roulette）
-- 頂部僅保留 **`← 返回`**、**當前篩選摘要膠囊**與 **`衛星`／`暗黑`／`街道`** 底圖切換，乾淨零重疊。
-- 進入後先停在**全區衛星俯視鳥瞰圖**框住所有候選店，點擊 **「開始衛星輪轉」** 即啟動「縮小地圖 (`Z14.5`) $\rightarrow$ 跳轉 $\rightarrow$ 放大聚焦屋頂 (`Z17.4`) 短暫停留 $\rightarrow$ 再縮小跳轉下一間 $\rightarrow$ 最終鎖定 (`Z17.6`)」的動態運鏡。
+---
+
+## iPhone 安裝至主畫面
+
+1. 在 iPhone 使用 **Safari** 打開：https://berton0310.github.io/meal-picker/
+2. 點擊底部工具列 **「分享」** $\rightarrow$ **「加入主畫面」**，即可獨立全螢幕開啟。
+
+---
+
+## 選用：開啟 Google Sheets 雙向雲端同步（2 分鐘）
+
+平常單機使用已會自動儲存在手機本機 `localStorage`；日後如需與 Google Sheets 雙向同步：
+1. 打開你的 Google 試算表 $\rightarrow$ **擴充功能** $\rightarrow$ **Apps Script**。
+2. 貼上 `scripts/google_apps_script.gs` 並修改 `SECRET_TOKEN`，點右上角 **部署 $\rightarrow$ 網頁應用程式**（執行身分：`我`，誰可以存取：`所有人`）。
+3. 回到 App「右上角管理清單 $\rightarrow$ 同步」貼上產生的 `/exec` 網址與密鑰即可。
 
 ---
 

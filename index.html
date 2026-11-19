@@ -22,26 +22,23 @@
     :root {
       --bg-outer: #06090D;
       --bg-home: #0B0F14;
-      --surface-card: #121820;
-      --surface-raised: #18202A;
+      --surface-card: #131A23;
+      --surface-raised: #1A232E;
       --map-fallback: #10171D;
       --glass-bg: rgba(14, 19, 24, 0.82);
       --glass-strong: rgba(14, 19, 24, 0.92);
       --line-subtle: rgba(255, 255, 255, 0.09);
       --glass-border: rgba(255, 255, 255, 0.14);
       --ink-main: #F4F6F8;
-      --ink-sub: #C4CED8;
-      --ink-muted: #8694A3;
+      --ink-sub: #C6D0DA;
+      --ink-muted: #8A97A6;
       --accent: #EA5828;
+      --accent-bright: #F66E3E;
       --accent-dark: #B33B14;
-      --accent-soft: rgba(234, 88, 40, 0.15);
       --accent-ink: #FFFFFF;
       --emerald: #34D399;
-      --sky: #38BDF8;
-      --amber: #FBBF24;
       --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
-      --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-      --ease-spring: cubic-bezier(0.22, 0.88, 0.28, 1);
+      --ease-spring: cubic-bezier(0.25, 0.8, 0.25, 1);
     }
 
     body[data-layer="street"] {
@@ -58,6 +55,7 @@
       background-color: var(--bg-outer);
       color: var(--ink-main);
       font-family: var(--font-sans);
+      font-variant-numeric: tabular-nums;
       -webkit-font-smoothing: antialiased;
       overflow: hidden;
       overscroll-behavior: none;
@@ -65,6 +63,7 @@
 
     button {
       font-family: inherit;
+      font-variant-numeric: tabular-nums;
       color: inherit;
       border: none;
       background: transparent;
@@ -94,49 +93,62 @@
       }
     }
 
-    /* ==================== 雙畫面切換容器 ==================== */
+    /* ==================== 三畫面切換容器（主頁 / 衛星抽籤 / 名單管理） ==================== */
     .screen {
       position: absolute;
       inset: 0;
       width: 100%;
       height: 100%;
-      transition: opacity 0.28s ease, transform 0.32s var(--ease-spring);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 1;
+      transition: opacity 0.28s ease, transform 0.34s var(--ease-spring);
     }
 
     body[data-screen="home"] #homeScreen {
       opacity: 1;
-      transform: translate3d(0, 0, 0);
+      transform: translate3d(0, 0, 0) scale(1);
       pointer-events: auto;
       z-index: 2;
     }
 
     body[data-screen="home"] #mapScreen {
-      opacity: 0;
-      transform: translate3d(24px, 0, 0);
-      pointer-events: none;
-      z-index: 1;
+      transform: scale(1.04);
+    }
+
+    body[data-screen="home"] #manageScreen {
+      transform: translate3d(32px, 0, 0);
     }
 
     body[data-screen="map"] #homeScreen {
-      opacity: 0;
-      transform: translate3d(-24px, 0, 0);
-      pointer-events: none;
-      z-index: 1;
+      transform: scale(0.95);
     }
 
     body[data-screen="map"] #mapScreen {
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
+      z-index: 2;
+    }
+
+    body[data-screen="manage"] #homeScreen {
+      transform: translate3d(-24px, 0, 0);
+    }
+
+    body[data-screen="manage"] #manageScreen {
       opacity: 1;
       transform: translate3d(0, 0, 0);
       pointer-events: auto;
       z-index: 2;
     }
 
-    /* ==================== PAGE 1：主畫面（圖表 ＋ 選品項） ==================== */
+    /* ==================== PAGE 1：Bento 趣味互動主畫面 ==================== */
     .home-screen {
       display: flex;
       flex-direction: column;
       background:
-        radial-gradient(circle at 85% 0%, rgba(234, 88, 40, 0.11) 0%, rgba(11, 15, 20, 0) 46%),
+        radial-gradient(circle at 82% 6%, rgba(234, 88, 40, 0.14) 0%, rgba(11, 15, 20, 0) 44%),
+        radial-gradient(circle at 14% 78%, rgba(56, 189, 248, 0.08) 0%, rgba(11, 15, 20, 0) 45%),
         var(--bg-home);
     }
 
@@ -146,12 +158,12 @@
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       padding:
-        calc(env(safe-area-inset-top, 12px) + 14px)
-        16px
-        18px;
+        calc(env(safe-area-inset-top, 8px) + 10px)
+        14px
+        8px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 9px;
       scrollbar-width: none;
     }
 
@@ -163,18 +175,18 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      padding: 2px 2px 4px;
+      gap: 10px;
+      padding: 2px 4px;
     }
 
     .home-title-group {
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: 2px;
     }
 
     .home-title {
-      font-size: 23px;
+      font-size: 22px;
       font-weight: 800;
       letter-spacing: -0.025em;
       color: var(--ink-main);
@@ -182,8 +194,8 @@
 
     .home-subtitle {
       font-size: 12px;
+      font-weight: 500;
       color: var(--ink-muted);
-      font-family: var(--font-mono);
     }
 
     .home-open-switch {
@@ -191,14 +203,18 @@
       display: inline-flex;
       align-items: center;
       gap: 7px;
-      padding: 8px 13px;
+      padding: 7px 12px;
       border-radius: 999px;
       background: var(--surface-raised);
       border: 1px solid var(--glass-border);
       font-size: 12px;
       font-weight: 600;
       color: var(--ink-sub);
-      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+      transition: transform 0.25s var(--ease-spring), background-color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .home-open-switch:active {
+      transform: scale(0.95);
     }
 
     .home-open-switch .dot {
@@ -211,64 +227,193 @@
 
     .home-open-switch.is-active {
       background: rgba(234, 88, 40, 0.16);
-      border-color: rgba(234, 88, 40, 0.6);
-      color: #FFD5C4;
+      border-color: rgba(234, 88, 40, 0.62);
+      color: #FFD7C7;
     }
 
     .home-open-switch.is-active .dot {
       background: var(--emerald);
-      box-shadow: 0 0 8px rgba(52, 211, 153, 0.75);
+      box-shadow: 0 0 8px rgba(52, 211, 153, 0.8);
     }
 
-    .panel-card {
-      background: var(--surface-card);
+    /* --- Bento Box 網格系統 --- */
+    .bento-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.12fr;
+      gap: 9px;
+    }
+
+    .bento-card {
+      position: relative;
+      background: linear-gradient(160deg, rgba(24, 33, 44, 0.92) 0%, rgba(16, 22, 30, 0.96) 100%);
       border: 1px solid var(--line-subtle);
-      border-radius: 18px;
-      padding: 14px;
+      border-radius: 19px;
+      padding: 11px 12px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
-    }
-
-    .panel-head {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
       gap: 8px;
+      overflow: hidden;
+      transition: transform 0.35s var(--ease-spring), border-color 0.25s ease, box-shadow 0.35s var(--ease-spring);
     }
 
-    .panel-title {
-      font-size: 13.5px;
+    .bento-card.is-tappable {
+      cursor: pointer;
+    }
+
+    .bento-card.is-tappable:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.18);
+      box-shadow: 0 12px 26px rgba(0, 0, 0, 0.36);
+    }
+
+    .bento-card.is-tappable:active {
+      transform: scale(0.975);
+    }
+
+    .span-2 {
+      grid-column: span 2;
+    }
+
+    .card-kicker {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .kicker-title {
+      font-size: 12.5px;
       font-weight: 700;
       color: var(--ink-main);
       letter-spacing: -0.01em;
     }
 
-    .panel-stat {
-      font-family: var(--font-mono);
-      font-size: 11.5px;
+    .kicker-pill {
+      font-size: 11px;
       font-weight: 600;
-      color: #FF8E63;
+      color: #FF946C;
+      white-space: nowrap;
     }
 
-    /* --- 圖表 1：即時營業堆疊分佈條 ＋ 6 格單選分類 --- */
-    .avail-stack {
+    /* --- Bento 左卡：即時營業 SVG 進度環 --- */
+    .ring-card {
+      align-items: center;
+      justify-content: space-between;
+      text-align: center;
+      gap: 6px;
+    }
+
+    .ring-card .card-kicker {
       width: 100%;
-      height: 9px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.06);
-      overflow: hidden;
+    }
+
+    .ring-wrap {
+      position: relative;
+      width: 74px;
+      height: 74px;
       display: flex;
-      gap: 2px;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
     }
 
-    .avail-seg {
-      height: 100%;
-      border-radius: 4px;
-      transition: width 0.35s var(--ease-spring), opacity 0.2s ease;
-      cursor: pointer;
+    .progress-ring {
+      transform: rotate(-90deg);
+      width: 74px;
+      height: 74px;
     }
 
+    .progress-ring__track {
+      stroke: rgba(255, 255, 255, 0.08);
+    }
+
+    .progress-ring__circle {
+      transition: stroke-dashoffset 0.75s var(--ease-spring), stroke 0.3s ease;
+    }
+
+    .ring-center {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      line-height: 1.05;
+    }
+
+    .ring-num {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--ink-main);
+    }
+
+    .ring-sub {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--ink-muted);
+      margin-top: 2px;
+    }
+
+    .ring-foot {
+      font-size: 11px;
+      color: var(--ink-muted);
+    }
+
+    /* --- Bento 右卡：互動「隨機靈感盲盒 / 近期最愛」趣味卡 --- */
+    .teaser-card {
+      justify-content: space-between;
+      background:
+        radial-gradient(circle at 100% 0%, rgba(234, 88, 40, 0.18) 0%, rgba(16, 22, 30, 0) 62%),
+        linear-gradient(160deg, rgba(24, 33, 44, 0.94) 0%, rgba(16, 22, 30, 0.98) 100%);
+    }
+
+    .teaser-body {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: opacity 0.2s ease, transform 0.26s var(--ease-spring);
+    }
+
+    .teaser-body.is-flipping {
+      opacity: 0;
+      transform: translateY(6px) scale(0.96);
+    }
+
+    .teaser-badge {
+      align-self: flex-start;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 10.5px;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.09);
+      color: #FFD5C4;
+    }
+
+    .teaser-name {
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1.25;
+      color: var(--ink-main);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .teaser-meta {
+      font-size: 11.5px;
+      color: var(--ink-muted);
+      line-height: 1.35;
+    }
+
+    .teaser-hint {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #FF946C;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* --- Bento 中卡：圖示化 3×2 品項卡片牆 --- */
     .cat-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -277,110 +422,141 @@
 
     .cat-card {
       position: relative;
-      padding: 10px 9px 9px;
-      border-radius: 13px;
+      padding: 8px 9px 8px;
+      border-radius: 14px;
       background: var(--surface-raised);
       border: 1px solid rgba(255, 255, 255, 0.07);
       display: flex;
       flex-direction: column;
       align-items: flex-start;
-      gap: 6px;
+      gap: 5px;
       text-align: left;
-      transition: transform 0.14s ease, border-color 0.2s ease, background-color 0.2s ease;
+      transition: transform 0.28s var(--ease-spring), border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.28s var(--ease-spring);
+    }
+
+    .cat-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.16);
     }
 
     .cat-card:active {
-      transform: scale(0.97);
+      transform: scale(0.95);
     }
 
     .cat-card.is-active {
-      background: rgba(234, 88, 40, 0.16);
-      border-color: rgba(234, 88, 40, 0.85);
-      box-shadow: 0 0 0 1px rgba(234, 88, 40, 0.25) inset;
+      background: rgba(234, 88, 40, 0.17);
+      border-color: rgba(234, 88, 40, 0.88);
+      box-shadow: 0 8px 18px rgba(234, 88, 40, 0.18), 0 0 0 1px rgba(234, 88, 40, 0.28) inset;
     }
 
     .cat-card.is-empty-open {
-      opacity: 0.48;
+      opacity: 0.46;
     }
 
-    .cat-card-top {
+    .cat-icon-row {
       width: 100%;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 4px;
     }
 
-    .cat-card-name {
-      font-size: 12.5px;
-      font-weight: 700;
-      color: var(--ink-main);
-      white-space: nowrap;
+    .cat-icon-wrap {
+      width: 26px;
+      height: 26px;
+      border-radius: 9px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.06);
     }
 
-    .cat-swatch {
-      width: 7px;
-      height: 7px;
-      border-radius: 999px;
-      flex-shrink: 0;
+    .cat-card.is-active .cat-icon-wrap {
+      background: rgba(234, 88, 40, 0.24);
     }
 
-    .cat-card-count {
-      font-family: var(--font-mono);
+    .cat-count-badge {
       font-size: 11px;
+      font-weight: 700;
       color: var(--ink-muted);
     }
 
-    .cat-card.is-active .cat-card-count {
+    .cat-card.is-active .cat-count-badge {
       color: #FFD5C4;
+    }
+
+    .cat-card-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink-main);
+      white-space: nowrap;
     }
 
     .cat-mini-track {
       width: 100%;
       height: 3.5px;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.07);
+      background: rgba(255, 255, 255, 0.08);
       overflow: hidden;
     }
 
     .cat-mini-fill {
       height: 100%;
       border-radius: 999px;
-      transition: width 0.3s ease;
+      transition: width 0.35s var(--ease-spring);
     }
 
-    /* --- 圖表 2：49 間口袋探索點陣圖（7×7 Waffle Matrix） --- */
-    .matrix-wrap {
-      display: flex;
-      align-items: center;
-      gap: 14px;
+    /* --- Bento 下卡：49 格探索星圖 ⇄ 分類統計 雙切卡 --- */
+    .sub-tabs {
+      display: inline-flex;
+      gap: 3px;
+      padding: 2px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
     }
 
-    .dot-matrix {
+    .sub-tab {
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--ink-muted);
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .sub-tab.is-active {
+      background: var(--ink-main);
+      color: #0E1318;
+      font-weight: 700;
+    }
+
+    .matrix-10 {
       display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 5px;
-      width: 146px;
-      flex-shrink: 0;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 4px;
     }
 
     .matrix-cell {
-      aspect-ratio: 1 / 1;
-      border-radius: 4px;
-      background: #1B232D;
+      height: 22px;
+      border-radius: 6px;
+      background: #1B232E;
       border: 1px solid rgba(255, 255, 255, 0.06);
-      transition: transform 0.14s ease, background-color 0.2s ease, border-color 0.2s ease;
+      transition: transform 0.2s var(--ease-spring), background-color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .matrix-cell:hover {
+      transform: scale(1.16);
+      border-color: rgba(255, 255, 255, 0.4);
     }
 
     .matrix-cell.is-open-new {
-      background: #2C3A4A;
-      border-color: rgba(255, 255, 255, 0.15);
+      background: #2E3D4F;
+      border-color: rgba(255, 255, 255, 0.16);
     }
 
     .matrix-cell.is-visited {
       background: var(--accent);
-      border-color: #FF946B;
-      box-shadow: 0 0 8px rgba(234, 88, 40, 0.35);
+      border-color: #FFA07A;
+      box-shadow: 0 0 10px rgba(234, 88, 40, 0.42);
     }
 
     .matrix-cell.is-selected {
@@ -389,63 +565,36 @@
       z-index: 2;
     }
 
-    .matrix-aside {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 9px;
-    }
-
-    .matrix-kpi-num {
-      font-family: var(--font-mono);
-      font-size: 24px;
-      font-weight: 800;
-      line-height: 1;
-      color: var(--ink-main);
-    }
-
-    .matrix-kpi-num span {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--ink-muted);
-    }
-
-    .matrix-legend {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      font-size: 11px;
-      color: var(--ink-muted);
-    }
-
-    .legend-row {
+    .matrix-foot-row {
       display: flex;
       align-items: center;
-      gap: 6px;
-    }
-
-    .legend-dot {
-      width: 9px;
-      height: 9px;
-      border-radius: 3px;
-      flex-shrink: 0;
-    }
-
-    .matrix-tip {
+      justify-content: space-between;
+      gap: 8px;
       font-size: 11.5px;
-      line-height: 1.4;
       color: var(--ink-sub);
-      padding: 7px 10px;
+      padding: 6px 10px;
       border-radius: 10px;
       background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .matrix-tip-text {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
-    /* --- 圖表 3：近期吃過紀錄與分類偏好比例 --- */
+    .matrix-count-pill {
+      flex-shrink: 0;
+      font-size: 11px;
+      font-weight: 700;
+      color: #FF946C;
+    }
+
+    .stats-pane[hidden],
+    .matrix-pane[hidden] {
+      display: none;
+    }
+
     .pref-bars {
       display: flex;
       flex-direction: column;
@@ -454,47 +603,44 @@
 
     .pref-row {
       display: grid;
-      grid-template-columns: 58px 1fr 34px;
+      grid-template-columns: 58px 1fr 38px;
       align-items: center;
       gap: 8px;
-      font-size: 11.5px;
+      font-size: 12px;
     }
 
     .pref-label {
       color: var(--ink-sub);
-      white-space: nowrap;
+      font-weight: 500;
     }
 
     .pref-track {
       height: 7px;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.06);
+      background: rgba(255, 255, 255, 0.07);
       overflow: hidden;
     }
 
     .pref-fill {
       height: 100%;
       border-radius: 999px;
-      min-width: 0;
-      transition: width 0.35s var(--ease-spring);
+      transition: width 0.4s var(--ease-spring);
     }
 
     .pref-val {
-      font-family: var(--font-mono);
-      font-size: 11px;
+      font-size: 11.5px;
+      font-weight: 600;
       color: var(--ink-muted);
       text-align: right;
     }
 
-    .recent-divider {
-      height: 1px;
-      background: var(--line-subtle);
-    }
-
     .recent-list {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--line-subtle);
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 5px;
     }
 
     .recent-item {
@@ -523,60 +669,149 @@
       font-size: 12px;
       line-height: 1.5;
       color: var(--ink-muted);
-      padding: 6px 2px 2px;
+      padding: 6px 2px;
     }
 
-    /* --- 主畫面底部固定主按鈕列 --- */
-    .home-cta-dock {
+    /* ==================== 底部動態圓盤啟動器（Kinetic Radar Dial） ==================== */
+    .dial-dock {
       flex-shrink: 0;
-      padding: 10px 16px calc(env(safe-area-inset-bottom, 12px) + 14px);
-      background: linear-gradient(0deg, var(--bg-home) 78%, rgba(11, 15, 20, 0) 100%);
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
-    }
-
-    .hero-go-btn {
-      width: 100%;
-      padding: 15px 18px;
-      border-radius: 15px;
-      background: var(--accent);
-      color: var(--accent-ink);
-      display: flex;
+      position: relative;
+      padding: 6px 16px calc(env(safe-area-inset-bottom, 10px) + 12px);
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      justify-content: space-between;
       gap: 10px;
-      box-shadow: 0 4px 0 var(--accent-dark), 0 12px 28px rgba(234, 88, 40, 0.34);
-      transition: transform 0.14s ease, box-shadow 0.14s ease;
+      background: linear-gradient(0deg, var(--bg-home) 74%, rgba(11, 15, 20, 0) 100%);
     }
 
-    .hero-go-btn:active {
-      transform: translateY(2px) scale(0.985);
-      box-shadow: 0 1px 0 var(--accent-dark);
+    .dial-side {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
     }
 
-    .hero-go-btn.is-warn {
-      background: #273240;
-      box-shadow: 0 3px 0 #171E26;
+    .dial-side.is-right {
+      align-items: flex-end;
+      text-align: right;
     }
 
-    .hero-go-main {
-      font-size: 15.5px;
-      font-weight: 800;
-      letter-spacing: 0.01em;
+    .dial-side-label {
+      font-size: 10.5px;
+      color: var(--ink-muted);
     }
 
-    .hero-go-sub {
-      font-size: 12px;
+    .dial-side-val {
+      font-size: 13px;
       font-weight: 700;
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: rgba(0, 0, 0, 0.22);
+      color: var(--ink-main);
       white-space: nowrap;
     }
 
-    /* ==================== PAGE 2：全螢幕俯視衛星抽籤畫面 ==================== */
+    .dial-launcher {
+      position: relative;
+      width: 114px;
+      height: 114px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      transition: transform 0.28s var(--ease-spring);
+    }
+
+    .dial-launcher:hover {
+      transform: scale(1.04);
+    }
+
+    .dial-launcher:active {
+      transform: scale(0.92);
+    }
+
+    .dial-pulse-wave {
+      position: absolute;
+      inset: 8px;
+      border-radius: 999px;
+      border: 1.5px solid rgba(234, 88, 40, 0.55);
+      animation: dialWave 2.6s cubic-bezier(0.2, 0.65, 0.3, 1) infinite;
+      pointer-events: none;
+    }
+
+    .dial-pulse-wave.is-delay {
+      animation-delay: 1.3s;
+    }
+
+    @keyframes dialWave {
+      0% { transform: scale(0.86); opacity: 0.7; }
+      100% { transform: scale(1.36); opacity: 0; }
+    }
+
+    .dial-compass-svg {
+      position: absolute;
+      inset: 0;
+      width: 114px;
+      height: 114px;
+      animation: orbitSpin 16s linear infinite;
+      pointer-events: none;
+      transition: transform 0.34s cubic-bezier(0.2, 0.9, 0.25, 1);
+    }
+
+    @keyframes orbitSpin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .dial-launcher.is-launching .dial-compass-svg {
+      animation: launchBurst 0.34s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    @keyframes launchBurst {
+      0% { transform: rotate(0deg) scale(1); }
+      100% { transform: rotate(300deg) scale(1.22); }
+    }
+
+    .dial-core {
+      position: relative;
+      z-index: 2;
+      width: 84px;
+      height: 84px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 32% 28%, #FF8252 0%, #EA5828 54%, #BA3D15 100%);
+      box-shadow:
+        0 10px 26px rgba(234, 88, 40, 0.45),
+        0 0 0 2px rgba(255, 255, 255, 0.16) inset,
+        0 -4px 10px rgba(0, 0, 0, 0.28) inset;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      color: #FFFFFF;
+      transition: filter 0.2s ease;
+    }
+
+    .dial-launcher.is-warn .dial-core {
+      background: radial-gradient(circle at 32% 28%, #3B4A5D 0%, #24303E 100%);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45), 0 0 0 1.5px rgba(255, 255, 255, 0.15) inset;
+    }
+
+    .dial-core-main {
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      line-height: 1.1;
+    }
+
+    .dial-core-sub {
+      font-size: 10.5px;
+      font-weight: 700;
+      opacity: 0.92;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.22);
+    }
+
+    /* ==================== PAGE 2：全螢幕俯視衛星輪轉畫面 ==================== */
     .map-screen {
       background-color: var(--map-fallback);
-      transition: background-color 0.3s ease, opacity 0.28s ease, transform 0.32s var(--ease-spring);
     }
 
     .map-canvas {
@@ -615,7 +850,6 @@
       z-index: 2;
     }
 
-    /* 乾淨無重疊的頂部導航列：← 返回 ＋ 條件摘要 ＋ 底圖切換 */
     .hud-top {
       position: absolute;
       top: 0;
@@ -718,9 +952,9 @@
     }
 
     .hud-coord {
-      font-family: var(--font-mono);
-      font-size: 10.5px;
-      letter-spacing: 0.02em;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.01em;
       color: rgba(244, 246, 248, 0.8);
       white-space: nowrap;
     }
@@ -929,12 +1163,634 @@
       line-height: 1;
       margin-top: -3px;
     }
+
+    /* ==================== 主頁右上管理按鈕 ==================== */
+    .home-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-shrink: 0;
+    }
+
+    .manage-icon-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      background: var(--surface-raised);
+      border: 1px solid var(--glass-border);
+      color: var(--ink-main);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s var(--ease-spring), border-color 0.2s ease, background-color 0.2s ease;
+    }
+
+    .manage-icon-btn:hover {
+      border-color: rgba(255, 255, 255, 0.26);
+      background: #222D3B;
+    }
+
+    .manage-icon-btn:active {
+      transform: scale(0.92);
+    }
+
+    /* ==================== PAGE 3：口袋名單管理頁 ==================== */
+    .manage-screen {
+      display: flex;
+      flex-direction: column;
+      background:
+        radial-gradient(circle at 86% 4%, rgba(234, 88, 40, 0.1) 0%, rgba(11, 15, 20, 0) 42%),
+        var(--bg-home);
+    }
+
+    .manage-header {
+      flex-shrink: 0;
+      padding: calc(env(safe-area-inset-top, 10px) + 10px) 14px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      border-bottom: 1px solid var(--line-subtle);
+      background: rgba(11, 15, 20, 0.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .manage-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .manage-nav-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--ink-main);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .manage-count-chip {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.09);
+      color: var(--ink-sub);
+    }
+
+    .manage-nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pill-ghost-btn {
+      height: 34px;
+      padding: 0 11px;
+      border-radius: 999px;
+      background: var(--surface-raised);
+      border: 1px solid var(--glass-border);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink-main);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: transform 0.14s ease;
+    }
+
+    .pill-ghost-btn:active {
+      transform: scale(0.95);
+    }
+
+    .pill-accent-btn {
+      height: 34px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #FFFFFF;
+      font-size: 12px;
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(234, 88, 40, 0.32);
+      transition: transform 0.14s ease;
+    }
+
+    .pill-accent-btn:active {
+      transform: scale(0.95);
+    }
+
+    .search-box {
+      width: 100%;
+      height: 38px;
+      padding: 0 13px;
+      border-radius: 12px;
+      background: var(--surface-card);
+      border: 1px solid var(--glass-border);
+      color: var(--ink-main);
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .search-box:focus {
+      border-color: rgba(234, 88, 40, 0.8);
+    }
+
+    .search-box::placeholder {
+      color: var(--ink-muted);
+    }
+
+    .manage-filters {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-bottom: 2px;
+    }
+
+    .manage-filters::-webkit-scrollbar {
+      display: none;
+    }
+
+    .m-filter-pill {
+      flex-shrink: 0;
+      padding: 5px 11px;
+      border-radius: 999px;
+      background: var(--surface-raised);
+      border: 1px solid var(--line-subtle);
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--ink-muted);
+      transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+    }
+
+    .m-filter-pill.is-active {
+      background: var(--ink-main);
+      color: #0E1318;
+      border-color: var(--ink-main);
+      font-weight: 700;
+    }
+
+    .manage-list {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 12px 14px calc(env(safe-area-inset-bottom, 12px) + 22px);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      scrollbar-width: none;
+    }
+
+    .manage-list::-webkit-scrollbar,
+    .modal-body::-webkit-scrollbar {
+      display: none;
+    }
+
+    .store-row {
+      padding: 11px 12px;
+      border-radius: 15px;
+      background: var(--surface-card);
+      border: 1px solid var(--line-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      transition: border-color 0.2s ease, opacity 0.2s ease;
+    }
+
+    .store-row.is-disabled {
+      opacity: 0.56;
+    }
+
+    .store-row-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .store-row-head {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .store-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+
+    .store-row-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--ink-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .store-muted-tag {
+      flex-shrink: 0;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--ink-muted);
+    }
+
+    .store-row-sub {
+      font-size: 11.5px;
+      color: var(--ink-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .store-row-controls {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mini-switch {
+      position: relative;
+      width: 38px;
+      height: 22px;
+      border-radius: 999px;
+      background: #273240;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      transition: background-color 0.2s ease;
+    }
+
+    .mini-switch::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      background: #CBD5E1;
+      transition: transform 0.22s var(--ease-spring), background-color 0.2s ease;
+    }
+
+    .mini-switch.is-on {
+      background: rgba(52, 211, 153, 0.3);
+      border-color: rgba(52, 211, 153, 0.65);
+    }
+
+    .mini-switch.is-on::after {
+      transform: translateX(16px);
+      background: #34D399;
+    }
+
+    .row-edit-btn {
+      padding: 6px 10px;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid var(--line-subtle);
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--ink-main);
+    }
+
+    .row-edit-btn:active {
+      transform: scale(0.95);
+    }
+
+    .manage-empty {
+      text-align: center;
+      padding: 36px 16px;
+      color: var(--ink-muted);
+      font-size: 13px;
+    }
+
+    /* ==================== 彈出式表單抽屜（新增／編輯 ＆ 雲端同步） ==================== */
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      background: rgba(5, 8, 12, 0.72);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.22s ease;
+    }
+
+    .modal-backdrop.is-open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-sheet {
+      width: 100%;
+      max-height: 90dvh;
+      background: #121821;
+      border-top: 1px solid var(--glass-border);
+      border-radius: 22px 22px 0 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: translateY(28px);
+      transition: transform 0.3s var(--ease-spring);
+      box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.65);
+    }
+
+    .modal-backdrop.is-open .modal-sheet {
+      transform: translateY(0);
+    }
+
+    .modal-head {
+      flex-shrink: 0;
+      padding: 14px 16px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line-subtle);
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--ink-main);
+    }
+
+    .modal-close-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--ink-sub);
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-body {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 14px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 13px;
+    }
+
+    .form-section {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--line-subtle);
+      border-radius: 14px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .form-section-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #FF946C;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .field-label {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--ink-sub);
+    }
+
+    .field-input,
+    .field-textarea {
+      width: 100%;
+      padding: 9px 11px;
+      border-radius: 10px;
+      background: #0C1117;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--ink-main);
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .field-input:focus,
+    .field-textarea:focus {
+      border-color: rgba(234, 88, 40, 0.8);
+    }
+
+    .field-textarea {
+      min-height: 62px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+
+    .inline-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .cat-pick-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .cat-pick-btn {
+      padding: 6px 11px;
+      border-radius: 999px;
+      background: #19222C;
+      border: 1px solid var(--line-subtle);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink-sub);
+    }
+
+    .cat-pick-btn.is-active {
+      background: rgba(234, 88, 40, 0.2);
+      border-color: var(--accent);
+      color: #FFFFFF;
+    }
+
+    .parse-feedback {
+      font-size: 11.5px;
+      line-height: 1.4;
+      color: var(--emerald);
+    }
+
+    .parse-feedback.is-warn {
+      color: #FBBF24;
+    }
+
+    .hours-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .hour-row {
+      display: grid;
+      grid-template-columns: 36px 1fr 44px;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hour-day {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink-sub);
+    }
+
+    .hour-rest-btn {
+      height: 34px;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--line-subtle);
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--ink-muted);
+    }
+
+    .hour-rest-btn.is-rest {
+      background: rgba(248, 113, 113, 0.16);
+      border-color: rgba(248, 113, 113, 0.5);
+      color: #FCA5A5;
+    }
+
+    .small-btn {
+      flex-shrink: 0;
+      height: 34px;
+      padding: 0 10px;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--glass-border);
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--ink-main);
+    }
+
+    .small-btn:active {
+      transform: scale(0.95);
+    }
+
+    .modal-foot {
+      flex-shrink: 0;
+      padding: 12px 16px calc(env(safe-area-inset-bottom, 12px) + 12px);
+      border-top: 1px solid var(--line-subtle);
+      background: #10161E;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .danger-btn {
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(248, 113, 113, 0.12);
+      border: 1px solid rgba(248, 113, 113, 0.45);
+      color: #FCA5A5;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .danger-btn[hidden] {
+      display: none;
+    }
+
+    .danger-btn.is-confirm {
+      background: #DC2626;
+      border-color: #EF4444;
+      color: #FFFFFF;
+    }
+
+    .modal-primary-btn {
+      flex: 1;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: var(--accent);
+      color: #FFFFFF;
+      font-size: 14px;
+      font-weight: 700;
+      box-shadow: 0 3px 0 var(--accent-dark);
+    }
+
+    .sync-hint {
+      font-size: 11.5px;
+      line-height: 1.5;
+      color: var(--ink-muted);
+    }
+
+    .sync-status {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--emerald);
+      min-height: 16px;
+    }
+
+    .sync-status.is-err {
+      color: #FCA5A5;
+    }
+
+    /* ==================== 浮動 Toast 提示 ==================== */
+    .app-toast {
+      position: absolute;
+      left: 50%;
+      bottom: calc(env(safe-area-inset-bottom, 12px) + 22px);
+      transform: translate(-50%, 16px);
+      z-index: 30;
+      padding: 9px 15px;
+      border-radius: 999px;
+      background: rgba(18, 25, 34, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #FFFFFF;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.22s ease, transform 0.26s var(--ease-spring);
+    }
+
+    .app-toast.is-show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
   </style>
 </head>
 <body data-screen="home" data-layer="sat">
   <main class="app-shell">
 
-    <!-- ==================== PAGE 1：主畫面（圖表資訊 ＋ 抽前選品項） ==================== -->
+    <!-- ==================== PAGE 1：Bento 趣味互動主畫面 ==================== -->
     <section id="homeScreen" class="screen home-screen" aria-label="主畫面">
       <div class="home-scroll">
         <header class="home-header">
@@ -942,58 +1798,120 @@
             <h1 class="home-title">今天吃什麼</h1>
             <div class="home-subtitle" id="homeTimeLine">台中北區 · 49 間口袋名單</div>
           </div>
-          <button type="button" id="homeOpenToggle" class="home-open-switch is-active" aria-pressed="true">
-            <span class="dot"></span>
-            <span id="homeOpenLabel">只抽營業中</span>
-          </button>
+          <div class="home-header-actions">
+            <button type="button" id="homeOpenToggle" class="home-open-switch is-active" aria-pressed="true">
+              <span class="dot"></span>
+              <span id="homeOpenLabel">只抽營業中</span>
+            </button>
+            <button type="button" id="openManageBtn" class="manage-icon-btn" aria-label="管理餐廳清單" title="管理口袋名單">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="8" y1="6" x2="21" y2="6" />
+                <line x1="8" y1="12" x2="21" y2="12" />
+                <line x1="8" y1="18" x2="21" y2="18" />
+                <circle cx="3.5" cy="6" r="1.2" fill="currentColor" stroke="none" />
+                <circle cx="3.5" cy="12" r="1.2" fill="currentColor" stroke="none" />
+                <circle cx="3.5" cy="18" r="1.2" fill="currentColor" stroke="none" />
+              </svg>
+            </button>
+          </div>
         </header>
 
-        <!-- 模組 1：即時營業分佈 ＋ 單選分類 -->
-        <article class="panel-card">
-          <div class="panel-head">
-            <h2 class="panel-title">選擇想吃的品項</h2>
-            <span class="panel-stat" id="homeOpenSummary">0 / 49 營業中</span>
-          </div>
-          <div class="avail-stack" id="availStackBar" aria-label="各分類即時營業比例條"></div>
-          <div class="cat-grid" id="homeCategoryGrid" role="radiogroup" aria-label="餐廳分類選擇"></div>
-        </article>
-
-        <!-- 模組 2：49 間口袋探索點陣圖 -->
-        <article class="panel-card">
-          <div class="panel-head">
-            <h2 class="panel-title">口袋名單探索點陣</h2>
-            <span class="panel-stat" id="homeExplorePct">0%</span>
-          </div>
-          <div class="matrix-wrap">
-            <div class="dot-matrix" id="exploreMatrix" aria-label="49 間口袋名單探索點陣圖"></div>
-            <div class="matrix-aside">
-              <div class="matrix-kpi-num" id="homeExploreKpi">0 <span>/ 49 間</span></div>
-              <div class="matrix-legend">
-                <div class="legend-row"><span class="legend-dot" style="background:#EA5828;"></span><span>已吃過解鎖</span></div>
-                <div class="legend-row"><span class="legend-dot" style="background:#2C3A4A;border:1px solid rgba(255,255,255,0.2);"></span><span>營業中待探索</span></div>
-                <div class="legend-row"><span class="legend-dot" style="background:#1B232D;"></span><span>目前休息中</span></div>
+        <div class="bento-grid">
+          <!-- Bento 左卡：即時營業 SVG 進度環（點擊快速切換營業條件） -->
+          <button type="button" id="openRingCard" class="bento-card ring-card is-tappable" aria-label="即時營業比例環">
+            <div class="card-kicker">
+              <span class="kicker-title">即時營業</span>
+              <span class="kicker-pill" id="homeOpenPct">0%</span>
+            </div>
+            <div class="ring-wrap">
+              <svg class="progress-ring" viewBox="0 0 82 82" width="82" height="82">
+                <circle class="progress-ring__track" cx="41" cy="41" r="33" stroke-width="6.5" fill="transparent" />
+                <circle id="openRingCircle" class="progress-ring__circle" cx="41" cy="41" r="33" stroke-width="6.5" stroke="#34D399" stroke-linecap="round" fill="transparent" />
+              </svg>
+              <div class="ring-center">
+                <span class="ring-num" id="openRingNum">0</span>
+                <span class="ring-sub" id="openRingDenom">/ 49 間</span>
               </div>
             </div>
-          </div>
-          <div class="matrix-tip" id="matrixTip">點擊任一方格可查看該間口袋店家狀態</div>
-        </article>
+            <div class="ring-foot" id="openRingFoot">目前時段營業中</div>
+          </button>
 
-        <!-- 模組 3：近期吃過紀錄與分類偏好比例 -->
-        <article class="panel-card">
-          <div class="panel-head">
-            <h2 class="panel-title">近期飲食偏好與紀錄</h2>
-            <span class="panel-stat" id="homeHistoryTotal">0 次紀錄</span>
-          </div>
-          <div class="pref-bars" id="homePrefBars"></div>
-          <div class="recent-divider" id="recentDivider" hidden></div>
-          <div class="recent-list" id="homeRecentList"></div>
-        </article>
+          <!-- Bento 右卡：互動靈感盲盒 / 近期最愛卡（點擊切換下一間靈感） -->
+          <button type="button" id="teaserCard" class="bento-card teaser-card is-tappable" aria-label="隨機未探索靈感卡">
+            <div class="card-kicker">
+              <span class="kicker-title" id="teaserTitle">今日靈感盲盒</span>
+              <span class="kicker-pill" id="teaserTag">換一間 ↻</span>
+            </div>
+            <div class="teaser-body" id="teaserBody">
+              <span class="teaser-badge" id="teaserBadge">早午餐</span>
+              <div class="teaser-name" id="teaserName">載入推薦中…</div>
+              <div class="teaser-meta" id="teaserMeta">台中北區口袋名單</div>
+            </div>
+            <div class="teaser-hint" id="teaserHint">點卡片偷看未吃過新店</div>
+          </button>
+
+          <!-- Bento 中卡：圖示化 3×2 品項卡片牆 -->
+          <article class="bento-card span-2">
+            <div class="card-kicker">
+              <span class="kicker-title">選擇想吃的品項</span>
+              <span class="kicker-pill" id="homeSelectionSummary">全部 · 營業中</span>
+            </div>
+            <div class="cat-grid" id="homeCategoryGrid" role="radiogroup" aria-label="餐廳分類選擇"></div>
+          </article>
+
+          <!-- Bento 下卡：49 格探索星圖 ⇄ 分類統計 雙切卡 -->
+          <article class="bento-card span-2">
+            <div class="card-kicker">
+              <span class="kicker-title">口袋足跡與偏好</span>
+              <div class="sub-tabs" role="tablist" aria-label="探索星圖與統計切換">
+                <button type="button" class="sub-tab is-active" data-subtab="matrix">49 格星圖</button>
+                <button type="button" class="sub-tab" data-subtab="stats">飲食統計</button>
+              </div>
+            </div>
+
+            <div class="matrix-pane" id="matrixPane">
+              <div class="matrix-10" id="exploreMatrix" aria-label="49 間口袋名單探索點陣圖"></div>
+              <div class="matrix-foot-row" style="margin-top:9px;">
+                <span class="matrix-tip-text" id="matrixTip">點擊任一方格查看該間店家狀態</span>
+                <span class="matrix-count-pill" id="homeExploreKpi">已解鎖 0/49</span>
+              </div>
+            </div>
+
+            <div class="stats-pane" id="statsPane" hidden>
+              <div class="pref-bars" id="homePrefBars"></div>
+              <div class="recent-list" id="homeRecentList" hidden></div>
+            </div>
+          </article>
+        </div>
       </div>
 
-      <footer class="home-cta-dock">
-        <button type="button" id="enterMapBtn" class="hero-go-btn">
-          <span class="hero-go-main" id="enterMapBtnMain">前往衛星選餐廳</span>
-          <span class="hero-go-sub" id="enterMapBtnSub">載入中</span>
+      <!-- 底部動態圓盤啟動器 -->
+      <footer class="dial-dock">
+        <div class="dial-side">
+          <span class="dial-side-label">已選品項</span>
+          <span class="dial-side-val" id="dialCatVal">全部</span>
+        </div>
+
+        <button type="button" id="enterMapBtn" class="dial-launcher" aria-label="啟動衛星俯視選餐廳">
+          <span class="dial-pulse-wave"></span>
+          <span class="dial-pulse-wave is-delay"></span>
+          <svg class="dial-compass-svg" viewBox="0 0 114 114" width="114" height="114" aria-hidden="true">
+            <circle cx="57" cy="57" r="52" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1.2" stroke-dasharray="3 6" />
+            <circle cx="57" cy="57" r="52" fill="none" stroke="#EA5828" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="56 271" />
+            <circle cx="57" cy="5" r="3" fill="#FF9C75" />
+            <circle cx="109" cy="57" r="2" fill="rgba(255,255,255,0.45)" />
+            <circle cx="57" cy="109" r="2" fill="rgba(255,255,255,0.45)" />
+            <circle cx="5" cy="57" r="2" fill="rgba(255,255,255,0.45)" />
+          </svg>
+          <span class="dial-core">
+            <span class="dial-core-main" id="enterMapBtnMain">出發選餐</span>
+            <span class="dial-core-sub" id="enterMapBtnSub">8 間</span>
+          </span>
+        </button>
+
+        <button type="button" id="dialOpenSideBtn" class="dial-side is-right" aria-label="切換營業時段篩選">
+          <span class="dial-side-label">時段條件</span>
+          <span class="dial-side-val" id="dialOpenVal">只抽營業中</span>
         </button>
       </footer>
     </section>
@@ -1004,7 +1922,6 @@
       <div class="hud-scrim-top"></div>
       <div class="hud-scrim-bottom"></div>
 
-      <!-- 頂部極簡導航列：← 返回 ＋ 當前篩選條件 ＋ 底圖切換（零重疊） -->
       <header class="hud-top">
         <div class="map-nav-row">
           <button type="button" id="backToHomeBtn" class="back-btn">← 返回</button>
@@ -1018,7 +1935,6 @@
         </div>
       </header>
 
-      <!-- 底部縮放工具 ＋ 店家資訊卡與動作列 -->
       <section class="bottom-dock-wrap">
         <div class="map-tools">
           <button type="button" id="zoomInBtn" class="map-tool-btn" aria-label="放大地圖">＋</button>
@@ -1052,6 +1968,169 @@
         </footer>
       </section>
     </section>
+
+    <!-- ==================== PAGE 3：口袋名單管理頁 ==================== -->
+    <section id="manageScreen" class="screen manage-screen" aria-label="口袋名單管理">
+      <header class="manage-header">
+        <div class="manage-nav">
+          <button type="button" id="manageBackBtn" class="pill-ghost-btn">← 返回</button>
+          <div class="manage-nav-title">
+            <span>口袋名單</span>
+            <span class="manage-count-chip" id="manageCountBadge">49 間</span>
+          </div>
+          <div class="manage-nav-actions">
+            <button type="button" id="openSyncBtn" class="pill-ghost-btn">同步</button>
+            <button type="button" id="openAddBtn" class="pill-accent-btn">＋ 新增</button>
+          </div>
+        </div>
+
+        <input
+          type="search"
+          id="manageSearchInput"
+          class="search-box"
+          placeholder="搜尋店名、招牌備註或分類…"
+          autocomplete="off"
+        />
+
+        <div class="manage-filters" id="manageFilterRow" role="tablist" aria-label="名單分類篩選"></div>
+      </header>
+
+      <div class="manage-list" id="manageList"></div>
+    </section>
+
+    <!-- ==================== 彈出抽屜 1：新增／編輯餐廳表單 ==================== -->
+    <div id="editorModal" class="modal-backdrop" aria-hidden="true">
+      <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="editorTitle">
+        <div class="modal-head">
+          <h2 class="modal-title" id="editorTitle">新增餐廳</h2>
+          <button type="button" id="closeEditorBtn" class="modal-close-btn" aria-label="關閉">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- 快速貼上 Google Maps -->
+          <div class="form-section">
+            <div class="form-section-title">快速貼上 Google Maps 分享文字或網址</div>
+            <textarea
+              id="editMapsPaste"
+              class="field-textarea"
+              placeholder="從 Google Maps 複製店家分享連結或網址貼在這裡，按解析自動帶入店名與經緯度座標…"
+            ></textarea>
+            <div class="inline-row">
+              <button type="button" id="parseMapsBtn" class="small-btn">解析帶入店名與座標</button>
+              <span class="parse-feedback" id="parseFeedback"></span>
+            </div>
+          </div>
+
+          <!-- 基本資訊 -->
+          <div class="form-section">
+            <div class="form-section-title">基本資訊</div>
+            <div class="field-group">
+              <label class="field-label" for="editName">餐廳名稱 *</label>
+              <input type="text" id="editName" class="field-input" placeholder="例如：阿明乾麵" />
+            </div>
+
+            <div class="field-group">
+              <span class="field-label">分類</span>
+              <div class="cat-pick-row" id="editCatRow"></div>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label" for="editNote">招牌菜／個人備註</label>
+              <input type="text" id="editNote" class="field-input" placeholder="例如：麻醬麵、燙青菜、週日公休" />
+            </div>
+
+            <div class="inline-row" style="justify-content:space-between;padding-top:2px;">
+              <span class="field-label">加入抽籤名單（啟用中）</span>
+              <button type="button" id="editEnabledToggle" class="mini-switch is-on" role="switch" aria-checked="true" aria-label="啟用此店家"></button>
+            </div>
+          </div>
+
+          <!-- 營業時間 -->
+          <div class="form-section">
+            <div class="form-section-title">營業時間（24 小時制，多時段用逗號分隔）</div>
+            <div class="inline-row">
+              <input type="text" id="quickHoursInput" class="field-input" placeholder="11:00-14:00,17:00-20:00" />
+              <button type="button" id="applyAllWeekBtn" class="small-btn">套用全週</button>
+              <button type="button" id="applyWeekdaysBtn" class="small-btn">平日</button>
+            </div>
+            <div class="hours-grid" id="editHoursGrid"></div>
+          </div>
+
+          <!-- 座標與連結 -->
+          <div class="form-section">
+            <div class="form-section-title">衛星座標與 Google Maps 連結</div>
+            <div class="two-col">
+              <div class="field-group">
+                <label class="field-label" for="editLat">緯度 Lat</label>
+                <input type="text" id="editLat" class="field-input" inputmode="decimal" placeholder="24.1618" />
+              </div>
+              <div class="field-group">
+                <label class="field-label" for="editLng">經度 Lng</label>
+                <input type="text" id="editLng" class="field-input" inputmode="decimal" placeholder="120.6824" />
+              </div>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="editMapsUrl">Google Maps 導航連結</label>
+              <input type="url" id="editMapsUrl" class="field-input" placeholder="https://maps.google.com/?q=..." />
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <button type="button" id="deletePlaceBtn" class="danger-btn" hidden>刪除店家</button>
+          <button type="button" id="savePlaceBtn" class="modal-primary-btn">儲存餐廳</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 彈出抽屜 2：雲端同步與 CSV 匯出 ==================== -->
+    <div id="syncModal" class="modal-backdrop" aria-hidden="true">
+      <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="syncTitle">
+        <div class="modal-head">
+          <h2 class="modal-title" id="syncTitle">雲端同步與 CSV 匯出</h2>
+          <button type="button" id="closeSyncBtn" class="modal-close-btn" aria-label="關閉">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-section">
+            <div class="form-section-title">CSV 備份與匯出（可貼回 Google Sheets）</div>
+            <p class="sync-hint">本機編輯會即時儲存在目前裝置。需要備份或手動貼回試算表時，可直接下載或複製完整 CSV。</p>
+            <div class="two-col">
+              <button type="button" id="downloadCsvBtn" class="small-btn" style="height:38px;">下載 CSV 檔</button>
+              <button type="button" id="copyCsvBtn" class="small-btn" style="height:38px;">複製完整 CSV</button>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-title">Google Apps Script 雙向雲端同步（選用）</div>
+            <p class="sync-hint">將專案內 <code>scripts/google_apps_script.gs</code> 貼入 Google 試算表部署成 Web App 後，填入網址與自訂密鑰即可自動雙向寫回雲端。</p>
+            <div class="field-group">
+              <label class="field-label" for="gasUrlInput">Web App 網址（.../exec）</label>
+              <input type="url" id="gasUrlInput" class="field-input" placeholder="https://script.google.com/macros/s/.../exec" />
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="gasTokenInput">自訂同步密鑰（SECRET_TOKEN）</label>
+              <input type="password" id="gasTokenInput" class="field-input" placeholder="與 Apps Script 一致的密鑰" />
+            </div>
+            <div class="inline-row">
+              <button type="button" id="saveGasBtn" class="small-btn" style="flex:1;height:36px;">儲存並測試連線</button>
+              <button type="button" id="pushGasBtn" class="small-btn" style="flex:1;height:36px;">整份推上雲端</button>
+            </div>
+            <div class="sync-status" id="gasStatusText"></div>
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-title">資料來源維護</div>
+            <div class="two-col">
+              <button type="button" id="pullSheetBtn" class="small-btn" style="height:38px;">從 Sheets 重拉</button>
+              <button type="button" id="resetDefaultBtn" class="danger-btn" style="padding:8px 10px;font-size:12px;">重設回預設 49 間</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="appToast" class="app-toast" role="status" aria-live="polite"></div>
 
   </main>
 
