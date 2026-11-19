@@ -7,7 +7,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="今天吃什麼" />
-  <meta name="theme-color" content="#0E1318" />
+  <meta name="theme-color" content="#0B0F14" />
   <title>今天吃什麼 · Meal Picker</title>
   <link rel="manifest" href="./manifest.json" />
   <link rel="apple-touch-icon" sizes="180x180" href="./assets/icon-180.png" />
@@ -20,19 +20,25 @@
     }
 
     :root {
-      --bg-outer: #070A0E;
+      --bg-outer: #06090D;
+      --bg-home: #0B0F14;
+      --surface-card: #121820;
+      --surface-raised: #18202A;
       --map-fallback: #10171D;
-      --glass-bg: rgba(14, 19, 24, 0.80);
-      --glass-strong: rgba(14, 19, 24, 0.90);
+      --glass-bg: rgba(14, 19, 24, 0.82);
+      --glass-strong: rgba(14, 19, 24, 0.92);
+      --line-subtle: rgba(255, 255, 255, 0.09);
       --glass-border: rgba(255, 255, 255, 0.14);
       --ink-main: #F4F6F8;
-      --ink-muted: #A3AEB8;
+      --ink-sub: #C4CED8;
+      --ink-muted: #8694A3;
       --accent: #EA5828;
       --accent-dark: #B33B14;
+      --accent-soft: rgba(234, 88, 40, 0.15);
       --accent-ink: #FFFFFF;
-      --pill-bg: rgba(255, 255, 255, 0.08);
-      --pill-active-bg: #F4F6F8;
-      --pill-active-ink: #11161C;
+      --emerald: #34D399;
+      --sky: #38BDF8;
+      --amber: #FBBF24;
       --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
       --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
       --ease-spring: cubic-bezier(0.22, 0.88, 0.28, 1);
@@ -78,15 +84,499 @@
       max-width: 460px;
       height: 100dvh;
       margin: 0 auto;
-      background-color: var(--map-fallback);
+      background-color: var(--bg-home);
       overflow: hidden;
-      transition: background-color 0.3s ease;
     }
 
     @media (min-width: 500px) {
       .app-shell {
         box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 28px 80px rgba(0, 0, 0, 0.72);
       }
+    }
+
+    /* ==================== 雙畫面切換容器 ==================== */
+    .screen {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      transition: opacity 0.28s ease, transform 0.32s var(--ease-spring);
+    }
+
+    body[data-screen="home"] #homeScreen {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+      pointer-events: auto;
+      z-index: 2;
+    }
+
+    body[data-screen="home"] #mapScreen {
+      opacity: 0;
+      transform: translate3d(24px, 0, 0);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    body[data-screen="map"] #homeScreen {
+      opacity: 0;
+      transform: translate3d(-24px, 0, 0);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    body[data-screen="map"] #mapScreen {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+      pointer-events: auto;
+      z-index: 2;
+    }
+
+    /* ==================== PAGE 1：主畫面（圖表 ＋ 選品項） ==================== */
+    .home-screen {
+      display: flex;
+      flex-direction: column;
+      background:
+        radial-gradient(circle at 85% 0%, rgba(234, 88, 40, 0.11) 0%, rgba(11, 15, 20, 0) 46%),
+        var(--bg-home);
+    }
+
+    .home-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding:
+        calc(env(safe-area-inset-top, 12px) + 14px)
+        16px
+        18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      scrollbar-width: none;
+    }
+
+    .home-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .home-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 2px 2px 4px;
+    }
+
+    .home-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .home-title {
+      font-size: 23px;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      color: var(--ink-main);
+    }
+
+    .home-subtitle {
+      font-size: 12px;
+      color: var(--ink-muted);
+      font-family: var(--font-mono);
+    }
+
+    .home-open-switch {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 13px;
+      border-radius: 999px;
+      background: var(--surface-raised);
+      border: 1px solid var(--glass-border);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink-sub);
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .home-open-switch .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--ink-muted);
+      transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .home-open-switch.is-active {
+      background: rgba(234, 88, 40, 0.16);
+      border-color: rgba(234, 88, 40, 0.6);
+      color: #FFD5C4;
+    }
+
+    .home-open-switch.is-active .dot {
+      background: var(--emerald);
+      box-shadow: 0 0 8px rgba(52, 211, 153, 0.75);
+    }
+
+    .panel-card {
+      background: var(--surface-card);
+      border: 1px solid var(--line-subtle);
+      border-radius: 18px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .panel-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--ink-main);
+      letter-spacing: -0.01em;
+    }
+
+    .panel-stat {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #FF8E63;
+    }
+
+    /* --- 圖表 1：即時營業堆疊分佈條 ＋ 6 格單選分類 --- */
+    .avail-stack {
+      width: 100%;
+      height: 9px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+      display: flex;
+      gap: 2px;
+    }
+
+    .avail-seg {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.35s var(--ease-spring), opacity 0.2s ease;
+      cursor: pointer;
+    }
+
+    .cat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .cat-card {
+      position: relative;
+      padding: 10px 9px 9px;
+      border-radius: 13px;
+      background: var(--surface-raised);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+      text-align: left;
+      transition: transform 0.14s ease, border-color 0.2s ease, background-color 0.2s ease;
+    }
+
+    .cat-card:active {
+      transform: scale(0.97);
+    }
+
+    .cat-card.is-active {
+      background: rgba(234, 88, 40, 0.16);
+      border-color: rgba(234, 88, 40, 0.85);
+      box-shadow: 0 0 0 1px rgba(234, 88, 40, 0.25) inset;
+    }
+
+    .cat-card.is-empty-open {
+      opacity: 0.48;
+    }
+
+    .cat-card-top {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+    }
+
+    .cat-card-name {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--ink-main);
+      white-space: nowrap;
+    }
+
+    .cat-swatch {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+
+    .cat-card-count {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--ink-muted);
+    }
+
+    .cat-card.is-active .cat-card-count {
+      color: #FFD5C4;
+    }
+
+    .cat-mini-track {
+      width: 100%;
+      height: 3.5px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.07);
+      overflow: hidden;
+    }
+
+    .cat-mini-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.3s ease;
+    }
+
+    /* --- 圖表 2：49 間口袋探索點陣圖（7×7 Waffle Matrix） --- */
+    .matrix-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .dot-matrix {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 5px;
+      width: 146px;
+      flex-shrink: 0;
+    }
+
+    .matrix-cell {
+      aspect-ratio: 1 / 1;
+      border-radius: 4px;
+      background: #1B232D;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: transform 0.14s ease, background-color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .matrix-cell.is-open-new {
+      background: #2C3A4A;
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .matrix-cell.is-visited {
+      background: var(--accent);
+      border-color: #FF946B;
+      box-shadow: 0 0 8px rgba(234, 88, 40, 0.35);
+    }
+
+    .matrix-cell.is-selected {
+      transform: scale(1.22);
+      border-color: #FFFFFF;
+      z-index: 2;
+    }
+
+    .matrix-aside {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .matrix-kpi-num {
+      font-family: var(--font-mono);
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--ink-main);
+    }
+
+    .matrix-kpi-num span {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink-muted);
+    }
+
+    .matrix-legend {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-size: 11px;
+      color: var(--ink-muted);
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    .matrix-tip {
+      font-size: 11.5px;
+      line-height: 1.4;
+      color: var(--ink-sub);
+      padding: 7px 10px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* --- 圖表 3：近期吃過紀錄與分類偏好比例 --- */
+    .pref-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .pref-row {
+      display: grid;
+      grid-template-columns: 58px 1fr 34px;
+      align-items: center;
+      gap: 8px;
+      font-size: 11.5px;
+    }
+
+    .pref-label {
+      color: var(--ink-sub);
+      white-space: nowrap;
+    }
+
+    .pref-track {
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+    }
+
+    .pref-fill {
+      height: 100%;
+      border-radius: 999px;
+      min-width: 0;
+      transition: width 0.35s var(--ease-spring);
+    }
+
+    .pref-val {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--ink-muted);
+      text-align: right;
+    }
+
+    .recent-divider {
+      height: 1px;
+      background: var(--line-subtle);
+    }
+
+    .recent-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .recent-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .recent-name {
+      color: var(--ink-main);
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .recent-meta {
+      flex-shrink: 0;
+      font-size: 11px;
+      color: var(--ink-muted);
+    }
+
+    .history-empty {
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--ink-muted);
+      padding: 6px 2px 2px;
+    }
+
+    /* --- 主畫面底部固定主按鈕列 --- */
+    .home-cta-dock {
+      flex-shrink: 0;
+      padding: 10px 16px calc(env(safe-area-inset-bottom, 12px) + 14px);
+      background: linear-gradient(0deg, var(--bg-home) 78%, rgba(11, 15, 20, 0) 100%);
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .hero-go-btn {
+      width: 100%;
+      padding: 15px 18px;
+      border-radius: 15px;
+      background: var(--accent);
+      color: var(--accent-ink);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      box-shadow: 0 4px 0 var(--accent-dark), 0 12px 28px rgba(234, 88, 40, 0.34);
+      transition: transform 0.14s ease, box-shadow 0.14s ease;
+    }
+
+    .hero-go-btn:active {
+      transform: translateY(2px) scale(0.985);
+      box-shadow: 0 1px 0 var(--accent-dark);
+    }
+
+    .hero-go-btn.is-warn {
+      background: #273240;
+      box-shadow: 0 3px 0 #171E26;
+    }
+
+    .hero-go-main {
+      font-size: 15.5px;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+    }
+
+    .hero-go-sub {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.22);
+      white-space: nowrap;
+    }
+
+    /* ==================== PAGE 2：全螢幕俯視衛星抽籤畫面 ==================== */
+    .map-screen {
+      background-color: var(--map-fallback);
+      transition: background-color 0.3s ease, opacity 0.28s ease, transform 0.32s var(--ease-spring);
     }
 
     .map-canvas {
@@ -108,8 +598,8 @@
       top: 0;
       left: 0;
       right: 0;
-      height: 120px;
-      background: linear-gradient(180deg, rgba(8, 12, 16, 0.64) 0%, rgba(8, 12, 16, 0) 100%);
+      height: 118px;
+      background: linear-gradient(180deg, rgba(8, 12, 16, 0.66) 0%, rgba(8, 12, 16, 0) 100%);
       pointer-events: none;
       z-index: 2;
     }
@@ -125,7 +615,7 @@
       z-index: 2;
     }
 
-    /* ==================== 1. 頂部極簡控制列 ==================== */
+    /* 乾淨無重疊的頂部導航列：← 返回 ＋ 條件摘要 ＋ 底圖切換 */
     .hud-top {
       position: absolute;
       top: 0;
@@ -143,77 +633,66 @@
       pointer-events: auto;
     }
 
-    .filter-bar {
+    .map-nav-row {
       display: flex;
       align-items: center;
-      gap: 6px;
+      justify-content: space-between;
+      gap: 8px;
     }
 
-    .category-scroll {
+    .back-btn {
+      flex-shrink: 0;
+      height: 36px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--ink-main);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: transform 0.14s ease;
+    }
+
+    .back-btn:active {
+      transform: scale(0.95);
+    }
+
+    .active-filter-pill {
       flex: 1;
       min-width: 0;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      overflow-x: auto;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-    }
-
-    .category-scroll::-webkit-scrollbar {
-      display: none;
-    }
-
-    .cat-pill {
-      flex-shrink: 0;
-      padding: 6px 12px;
+      height: 36px;
+      padding: 0 12px;
       border-radius: 999px;
       background: var(--glass-bg);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--glass-border);
-      color: var(--ink-main);
       font-size: 12px;
-      font-weight: 500;
-      transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-    }
-
-    .cat-pill.is-active {
-      background: var(--pill-active-bg);
-      color: var(--pill-active-ink);
-      border-color: var(--pill-active-bg);
-      font-weight: 700;
-    }
-
-    .open-toggle {
-      flex-shrink: 0;
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: var(--glass-bg);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid var(--glass-border);
-      font-size: 11.5px;
       font-weight: 600;
-      color: var(--ink-muted);
-      transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-    }
-
-    .open-toggle.is-active {
-      background: var(--accent);
-      color: var(--accent-ink);
-      border-color: var(--accent);
+      color: var(--ink-main);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .layer-toggle {
       flex-shrink: 0;
-      padding: 6px 10px;
+      height: 36px;
+      padding: 0 12px;
       border-radius: 999px;
       background: var(--glass-bg);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--glass-border);
-      font-size: 11.5px;
+      font-size: 12px;
       font-weight: 700;
       color: var(--ink-main);
       transition: transform 0.14s ease;
@@ -254,7 +733,6 @@
       text-overflow: ellipsis;
     }
 
-    /* ==================== 2. 底部右側縮放工具 ＋ 懸浮資訊卡片 ==================== */
     .bottom-dock-wrap {
       position: absolute;
       left: 0;
@@ -374,7 +852,8 @@
     }
 
     .empty-panel[hidden],
-    .place-card[hidden] {
+    .place-card[hidden],
+    .action-dock[hidden] {
       display: none;
     }
 
@@ -394,7 +873,7 @@
       margin-top: 2px;
       padding: 8px 14px;
       border-radius: 10px;
-      background: var(--pill-bg);
+      background: rgba(255, 255, 255, 0.08);
       border: 1px solid var(--glass-border);
       font-size: 12.5px;
       font-weight: 600;
@@ -405,6 +884,10 @@
       display: grid;
       grid-template-columns: 1.22fr 1fr;
       gap: 9px;
+    }
+
+    .action-dock.is-single {
+      grid-template-columns: 1fr;
     }
 
     .action-primary {
@@ -448,55 +931,128 @@
     }
   </style>
 </head>
-<body data-layer="sat">
+<body data-screen="home" data-layer="sat">
   <main class="app-shell">
-    <canvas id="mapCanvas" class="map-canvas"></canvas>
-    <div class="hud-scrim-top"></div>
-    <div class="hud-scrim-bottom"></div>
 
-    <!-- 1. 頂部極簡篩選與即時座標 HUD -->
-    <header class="hud-top">
-      <div class="filter-bar">
-        <div class="category-scroll" id="categoryRow"></div>
-        <button type="button" id="openToggleBtn" class="open-toggle is-active">營業中</button>
-        <button type="button" id="layerToggleBtn" class="layer-toggle" aria-label="切換地圖底圖">衛星</button>
+    <!-- ==================== PAGE 1：主畫面（圖表資訊 ＋ 抽前選品項） ==================== -->
+    <section id="homeScreen" class="screen home-screen" aria-label="主畫面">
+      <div class="home-scroll">
+        <header class="home-header">
+          <div class="home-title-group">
+            <h1 class="home-title">今天吃什麼</h1>
+            <div class="home-subtitle" id="homeTimeLine">台中北區 · 49 間口袋名單</div>
+          </div>
+          <button type="button" id="homeOpenToggle" class="home-open-switch is-active" aria-pressed="true">
+            <span class="dot"></span>
+            <span id="homeOpenLabel">只抽營業中</span>
+          </button>
+        </header>
+
+        <!-- 模組 1：即時營業分佈 ＋ 單選分類 -->
+        <article class="panel-card">
+          <div class="panel-head">
+            <h2 class="panel-title">選擇想吃的品項</h2>
+            <span class="panel-stat" id="homeOpenSummary">0 / 49 營業中</span>
+          </div>
+          <div class="avail-stack" id="availStackBar" aria-label="各分類即時營業比例條"></div>
+          <div class="cat-grid" id="homeCategoryGrid" role="radiogroup" aria-label="餐廳分類選擇"></div>
+        </article>
+
+        <!-- 模組 2：49 間口袋探索點陣圖 -->
+        <article class="panel-card">
+          <div class="panel-head">
+            <h2 class="panel-title">口袋名單探索點陣</h2>
+            <span class="panel-stat" id="homeExplorePct">0%</span>
+          </div>
+          <div class="matrix-wrap">
+            <div class="dot-matrix" id="exploreMatrix" aria-label="49 間口袋名單探索點陣圖"></div>
+            <div class="matrix-aside">
+              <div class="matrix-kpi-num" id="homeExploreKpi">0 <span>/ 49 間</span></div>
+              <div class="matrix-legend">
+                <div class="legend-row"><span class="legend-dot" style="background:#EA5828;"></span><span>已吃過解鎖</span></div>
+                <div class="legend-row"><span class="legend-dot" style="background:#2C3A4A;border:1px solid rgba(255,255,255,0.2);"></span><span>營業中待探索</span></div>
+                <div class="legend-row"><span class="legend-dot" style="background:#1B232D;"></span><span>目前休息中</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="matrix-tip" id="matrixTip">點擊任一方格可查看該間口袋店家狀態</div>
+        </article>
+
+        <!-- 模組 3：近期吃過紀錄與分類偏好比例 -->
+        <article class="panel-card">
+          <div class="panel-head">
+            <h2 class="panel-title">近期飲食偏好與紀錄</h2>
+            <span class="panel-stat" id="homeHistoryTotal">0 次紀錄</span>
+          </div>
+          <div class="pref-bars" id="homePrefBars"></div>
+          <div class="recent-divider" id="recentDivider" hidden></div>
+          <div class="recent-list" id="homeRecentList"></div>
+        </article>
       </div>
 
-      <div class="hud-telemetry">
-        <span class="hud-coord" id="hudCoordText">24.1558°N  120.6822°E</span>
-        <span class="hud-status" id="hudStatusText">已鎖定</span>
-      </div>
-    </header>
-
-    <!-- 2. 底部右側縮放微調 ＋ 店家資訊卡與雙動作列 -->
-    <section class="bottom-dock-wrap">
-      <div class="map-tools">
-        <button type="button" id="zoomInBtn" class="map-tool-btn" aria-label="放大地圖">＋</button>
-        <button type="button" id="zoomOutBtn" class="map-tool-btn" aria-label="縮小地圖">－</button>
-        <button type="button" id="overviewBtn" class="map-tool-btn map-tool-wide" aria-label="回到全區鳥瞰">全區</button>
-      </div>
-
-      <footer class="bottom-sheet" aria-live="polite">
-        <div class="place-card" id="placeCard">
-          <h2 class="card-title" id="cardTitle">載入中…</h2>
-          <p class="card-sub" id="cardSub"></p>
-          <p class="card-meta" id="cardMeta"></p>
-        </div>
-
-        <div class="empty-panel" id="emptyPanel" hidden>
-          <div class="empty-title">目前這個分類沒有在營業的店家</div>
-          <p class="empty-sub">可能是午休或深夜時段，切換為「不限時段」就能從全部口袋名單抽籤。</p>
-          <button type="button" id="emptyShowAllBtn" class="empty-action-btn">改為不限時段</button>
-        </div>
-
-        <div class="action-dock">
-          <button type="button" id="goEatBtn" class="action-primary">出發去吃</button>
-          <button type="button" id="redrawBtn" class="action-secondary">輪轉抽下一間</button>
-        </div>
-
-        <div class="map-attrib" id="mapAttrib">衛星圖資 © Esri · World Transportation</div>
+      <footer class="home-cta-dock">
+        <button type="button" id="enterMapBtn" class="hero-go-btn">
+          <span class="hero-go-main" id="enterMapBtnMain">前往衛星選餐廳</span>
+          <span class="hero-go-sub" id="enterMapBtnSub">載入中</span>
+        </button>
       </footer>
     </section>
+
+    <!-- ==================== PAGE 2：全螢幕俯視衛星輪轉畫面 ==================== -->
+    <section id="mapScreen" class="screen map-screen" aria-label="衛星俯視抽籤畫面">
+      <canvas id="mapCanvas" class="map-canvas"></canvas>
+      <div class="hud-scrim-top"></div>
+      <div class="hud-scrim-bottom"></div>
+
+      <!-- 頂部極簡導航列：← 返回 ＋ 當前篩選條件 ＋ 底圖切換（零重疊） -->
+      <header class="hud-top">
+        <div class="map-nav-row">
+          <button type="button" id="backToHomeBtn" class="back-btn">← 返回</button>
+          <button type="button" id="activeFilterPill" class="active-filter-pill" title="返回修改條件">全部 · 營業中</button>
+          <button type="button" id="layerToggleBtn" class="layer-toggle" aria-label="切換地圖底圖">衛星</button>
+        </div>
+
+        <div class="hud-telemetry">
+          <span class="hud-coord" id="hudCoordText">24.1558°N  120.6822°E</span>
+          <span class="hud-status" id="hudStatusText">全區俯視待命</span>
+        </div>
+      </header>
+
+      <!-- 底部縮放工具 ＋ 店家資訊卡與動作列 -->
+      <section class="bottom-dock-wrap">
+        <div class="map-tools">
+          <button type="button" id="zoomInBtn" class="map-tool-btn" aria-label="放大地圖">＋</button>
+          <button type="button" id="zoomOutBtn" class="map-tool-btn" aria-label="縮小地圖">－</button>
+          <button type="button" id="overviewBtn" class="map-tool-btn map-tool-wide" aria-label="回到全區鳥瞰">全區</button>
+        </div>
+
+        <footer class="bottom-sheet" aria-live="polite">
+          <div class="place-card" id="placeCard">
+            <h2 class="card-title" id="cardTitle">全區衛星俯視待命</h2>
+            <p class="card-sub" id="cardSub"></p>
+            <p class="card-meta" id="cardMeta"></p>
+          </div>
+
+          <div class="empty-panel" id="emptyPanel" hidden>
+            <div class="empty-title">目前條件沒有營業中的店家</div>
+            <p class="empty-sub">可能是午休或深夜時段，切換為「不限時段」或返回主畫面更換分類。</p>
+            <button type="button" id="emptyShowAllBtn" class="empty-action-btn">改為不限時段</button>
+          </div>
+
+          <div class="action-dock is-single" id="readyDock">
+            <button type="button" id="startSpinBtn" class="action-primary">開始衛星輪轉</button>
+          </div>
+
+          <div class="action-dock" id="resultDock" hidden>
+            <button type="button" id="goEatBtn" class="action-primary">出發去吃</button>
+            <button type="button" id="redrawBtn" class="action-secondary">再輪轉一次</button>
+          </div>
+
+          <div class="map-attrib" id="mapAttrib">衛星圖資 © Esri · World Transportation</div>
+        </footer>
+      </section>
+    </section>
+
   </main>
 
   <script src="./app.js"></script>

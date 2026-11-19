@@ -485,6 +485,15 @@
     const HOP_FOCUS_ZOOM = 17.35;
     const LOCK_ZOOM = 17.6;
 
+    const CATEGORY_COLORS = {
+      全部: '#EA5828',
+      健康餐: '#34D399',
+      早午餐: '#FBBF24',
+      便當飯類: '#38BDF8',
+      麵食小吃: '#FB7185',
+      鍋物熱炒: '#C084FC'
+    };
+
     const MAP_LAYERS = {
       sat: {
         label: '衛星',
@@ -540,13 +549,16 @@
 
     const searchParams = new URLSearchParams(window.location.search);
     const urlLayer = searchParams.get('layer');
+    const urlScreen = searchParams.get('screen');
     if (MAP_LAYERS[urlLayer]) savedPrefs.layer = urlLayer;
     if (!MAP_LAYERS[savedPrefs.layer]) savedPrefs.layer = 'sat';
     if (!CATEGORIES.includes(savedPrefs.category)) savedPrefs.category = '全部';
 
     const cachedWrap = loadJson(STORAGE_KEYS.placesCache, null);
     const appState = {
+      screen: urlScreen === 'map' ? 'map' : 'home',
       prefs: savedPrefs,
+      selectedMatrixKey: null,
       places: (cachedWrap && Array.isArray(cachedWrap.places) && cachedWrap.places.length > 0)
         ? cachedWrap.places
         : DEFAULT_PLACES,
@@ -1045,7 +1057,7 @@
 
     function startRenderLoop() {
       const step = nowTs => {
-        if (!document.hidden) {
+        if (!document.hidden && appState.screen === 'map') {
           renderMapFrame(nowTs);
         }
         requestAnimationFrame(step);
@@ -1098,24 +1110,27 @@
       return `${timePart} · ${formatDistShort(place.dist)}`;
     }
 
-    function getCandidates() {
+    function getAllEnrichedPlaces() {
       const now = new Date();
       const nowMs = now.getTime();
-      return appState.places
-        .map(p => {
-          const hasCoords = Number.isFinite(p.lat) && Number.isFinite(p.lng);
-          const dist = hasCoords
-            ? haversineMeters(appState.userLoc.lat, appState.userLoc.lng, p.lat, p.lng)
-            : Infinity;
-          const openStatus = getOpenStatus(p, now, CLOSING_SOON_MINS);
-          const weightInfo = computeWeightDetail(p, appState.history, appState.passedIds, nowMs, true);
-          return { ...p, dist, openStatus, weightInfo };
-        })
-        .filter(p => {
-          if (appState.prefs.category !== '全部' && p.category !== appState.prefs.category) return false;
-          if (appState.prefs.onlyOpen && p.openStatus.state === 'closed') return false;
-          return true;
-        });
+      return appState.places.map(p => {
+        const hasCoords = Number.isFinite(p.lat) && Number.isFinite(p.lng);
+        const dist = hasCoords
+          ? haversineMeters(appState.userLoc.lat, appState.userLoc.lng, p.lat, p.lng)
+          : Infinity;
+        const openStatus = getOpenStatus(p, now, CLOSING_SOON_MINS);
+        const weightInfo = computeWeightDetail(p, appState.history, appState.passedIds, nowMs, true);
+        const historyRec = lookupHistory(appState.history, p);
+        return { ...p, dist, openStatus, weightInfo, historyRec };
+      });
+    }
+
+    function getCandidates() {
+      return getAllEnrichedPlaces().filter(p => {
+        if (appState.prefs.category !== '全部' && p.category !== appState.prefs.category) return false;
+        if (appState.prefs.onlyOpen && p.openStatus.state === 'closed') return false;
+        return true;
+      });
     }
 
     function drawNextCandidate(excludeCurrent = false) {
@@ -1157,50 +1172,326 @@
       openExternalMap(pick.maps_url);
     }
 
-    // ==================== 頂部與底部 HUD 更新 ====================
+    // ==================== PAGE 1：主畫面圖表與選品項渲染 ====================
+    function formatDaysAgo(ts) {
+      if (!ts) return '';
+      const diffDays = Math.floor(Math.max(0, Date.now() - ts) / 86400000);
+      if (diffDays <= 0) return '今天吃過';
+      if (diffDays === 1) return '1 天前';
+      return `${diffDays} 天前`;
+    }
+
+    function renderHomeDashboard() {
+      const allPlaces = getAllEnrichedPlaces();
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+
+      const timeLine = document.getElementById('homeTimeLine');
+      if (timeLine) timeLine.textContent = `台中北區 · ${hh}:${mm} · 共 ${allPlaces.length} 間口袋名單`;
+
+      const openSwitch = document.getElementById('homeOpenToggle');
+      const openLabel = document.getElementById('homeOpenLabel');
+      if (openSwitch) {
+        openSwitch.classList.toggle('is-active', appState.prefs.onlyOpen);
+        openSwitch.setAttribute('aria-pressed', String(appState.prefs.onlyOpen));
+      }
+      if (openLabel) openLabel.textContent = appState.prefs.onlyOpen ? '只抽營業中' : '不限時段';
+
+      // 1. 計算各分類即時營業統計
+      const realCats = CATEGORIES.slice(1);
+      const stats = {};
+      CATEGORIES.forEach(cat => {
+        stats[cat] = { open: 0, total: 0 };
+      });
+      allPlaces.forEach(p => {
+        const isOpen = p.openStatus.state !== 'closed';
+        stats['全部'].total += 1;
+        if (isOpen) stats['全部'].open += 1;
+        if (stats[p.category]) {
+          stats[p.category].total += 1;
+          if (isOpen) stats[p.category].open += 1;
+        }
+      });
+
+      const openSummary = document.getElementById('homeOpenSummary');
+      if (openSummary) {
+        openSummary.textContent = `${stats['全部'].open} / ${stats['全部'].total} 營業中`;
+      }
+
+      // 即時營業堆疊分佈條
+      const stackBar = document.getElementById('availStackBar');
+      if (stackBar) {
+        stackBar.innerHTML = '';
+        const denom = stats['全部'].open > 0 ? stats['全部'].open : Math.max(1, stats['全部'].total);
+        realCats.forEach(cat => {
+          const val = stats['全部'].open > 0 ? stats[cat].open : stats[cat].total;
+          if (val <= 0) return;
+          const seg = document.createElement('div');
+          seg.className = 'avail-seg';
+          seg.style.width = `${(val / denom) * 100}%`;
+          seg.style.backgroundColor = CATEGORY_COLORS[cat] || '#EA5828';
+          seg.style.opacity = (appState.prefs.category === '全部' || appState.prefs.category === cat) ? '1' : '0.28';
+          seg.title = `${cat}：${stats[cat].open}/${stats[cat].total} 營業中`;
+          seg.onclick = () => {
+            appState.prefs.category = appState.prefs.category === cat ? '全部' : cat;
+            persistPrefs();
+            renderHomeDashboard();
+          };
+          stackBar.appendChild(seg);
+        });
+      }
+
+      // 3×2 等寬單選品項網格（絕無重疊裁切）
+      const catGrid = document.getElementById('homeCategoryGrid');
+      if (catGrid) {
+        catGrid.innerHTML = '';
+        CATEGORIES.forEach(cat => {
+          const st = stats[cat];
+          const active = appState.prefs.category === cat;
+          const emptyUnderOpen = appState.prefs.onlyOpen && st.open === 0;
+          const ratio = st.total > 0 ? Math.round((st.open / st.total) * 100) : 0;
+          const color = CATEGORY_COLORS[cat] || '#EA5828';
+
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = `cat-card ${active ? 'is-active' : ''} ${emptyUnderOpen ? 'is-empty-open' : ''}`;
+          btn.setAttribute('role', 'radio');
+          btn.setAttribute('aria-checked', String(active));
+          btn.innerHTML = `
+            <div class="cat-card-top">
+              <span class="cat-card-name">${escapeHtml(cat)}</span>
+              <span class="cat-swatch" style="background:${color};"></span>
+            </div>
+            <div class="cat-card-count">${appState.prefs.onlyOpen ? `${st.open}/${st.total} 營業` : `${st.total} 間全部`}</div>
+            <div class="cat-mini-track">
+              <div class="cat-mini-fill" style="width:${ratio}%;background:${color};"></div>
+            </div>
+          `;
+          btn.onclick = () => {
+            appState.prefs.category = cat;
+            persistPrefs();
+            renderHomeDashboard();
+          };
+          catGrid.appendChild(btn);
+        });
+      }
+
+      // 2. 49 間口袋探索點陣圖（7×7 Waffle Matrix）
+      const visitedPlaces = allPlaces.filter(p => Boolean(p.historyRec));
+      const explorePct = document.getElementById('homeExplorePct');
+      const exploreKpi = document.getElementById('homeExploreKpi');
+      const matrixEl = document.getElementById('exploreMatrix');
+      const matrixTip = document.getElementById('matrixTip');
+
+      if (explorePct) {
+        explorePct.textContent = `${Math.round((visitedPlaces.length / Math.max(1, allPlaces.length)) * 100)}%`;
+      }
+      if (exploreKpi) {
+        exploreKpi.innerHTML = `${visitedPlaces.length} <span>/ ${allPlaces.length} 間</span>`;
+      }
+
+      if (matrixEl) {
+        matrixEl.innerHTML = '';
+        allPlaces.forEach(p => {
+          const key = placeKey(p);
+          const cell = document.createElement('button');
+          cell.type = 'button';
+          const statusCls = p.historyRec
+            ? 'is-visited'
+            : (p.openStatus.state !== 'closed' ? 'is-open-new' : '');
+          const selCls = appState.selectedMatrixKey === key ? 'is-selected' : '';
+          cell.className = `matrix-cell ${statusCls} ${selCls}`.trim();
+          cell.setAttribute('aria-label', `${p.name}（${p.category}）`);
+          cell.onclick = () => {
+            appState.selectedMatrixKey = key;
+            if (matrixTip) {
+              const openTxt = p.openStatus.state === 'open' ? p.openStatus.todayText : p.openStatus.label;
+              const visitTxt = p.historyRec ? `已吃過 ${p.historyRec.count} 次` : '尚未探索';
+              matrixTip.textContent = `${p.name} · ${p.category} · ${openTxt}（${visitTxt}）`;
+            }
+            matrixEl.querySelectorAll('.matrix-cell').forEach(el => el.classList.remove('is-selected'));
+            cell.classList.add('is-selected');
+          };
+          matrixEl.appendChild(cell);
+        });
+      }
+
+      // 3. 近期吃過紀錄與分類偏好比例
+      const placeByKey = new Map();
+      allPlaces.forEach(p => placeByKey.set(placeKey(p), p));
+
+      const historyList = Object.values(appState.history || {})
+        .filter(rec => rec && rec.count > 0)
+        .sort((a, b) => (b.lastAteAt || 0) - (a.lastAteAt || 0));
+
+      const totalMeals = historyList.reduce((acc, r) => acc + (r.count || 0), 0);
+      const historyTotalEl = document.getElementById('homeHistoryTotal');
+      const prefBarsEl = document.getElementById('homePrefBars');
+      const recentDivider = document.getElementById('recentDivider');
+      const recentListEl = document.getElementById('homeRecentList');
+
+      if (historyTotalEl) historyTotalEl.textContent = `${totalMeals} 次紀錄`;
+
+      if (prefBarsEl && recentListEl) {
+        if (totalMeals === 0) {
+          prefBarsEl.innerHTML = `<p class="history-empty">尚無用餐紀錄 — 前往衛星畫面抽中並點擊「出發去吃」後，系統會自動統計分類偏好與近期避重清單。</p>`;
+          if (recentDivider) recentDivider.hidden = true;
+          recentListEl.innerHTML = '';
+        } else {
+          const catMeals = {};
+          realCats.forEach(c => { catMeals[c] = 0; });
+          historyList.forEach(rec => {
+            const matched = placeByKey.get(rec.key) || allPlaces.find(p => p.name === rec.name);
+            const cat = matched ? matched.category : null;
+            if (cat && catMeals[cat] !== undefined) {
+              catMeals[cat] += rec.count || 1;
+            }
+          });
+          const maxMeal = Math.max(1, ...Object.values(catMeals));
+
+          prefBarsEl.innerHTML = realCats.map(cat => {
+            const cnt = catMeals[cat];
+            const pct = cnt > 0 ? Math.max(8, Math.round((cnt / maxMeal) * 100)) : 0;
+            const col = CATEGORY_COLORS[cat] || '#EA5828';
+            return `
+              <div class="pref-row">
+                <span class="pref-label">${escapeHtml(cat)}</span>
+                <div class="pref-track">
+                  <div class="pref-fill" style="width:${pct}%;background:${col};"></div>
+                </div>
+                <span class="pref-val">${cnt} 次</span>
+              </div>
+            `;
+          }).join('');
+
+          if (recentDivider) recentDivider.hidden = false;
+          recentListEl.innerHTML = historyList.slice(0, 4).map(rec => {
+            const matched = placeByKey.get(rec.key) || allPlaces.find(p => p.name === rec.name);
+            const cat = matched ? matched.category : '口袋名單';
+            return `
+              <div class="recent-item">
+                <span class="recent-name">${escapeHtml(rec.name)}</span>
+                <span class="recent-meta">${escapeHtml(cat)} · ${escapeHtml(formatDaysAgo(rec.lastAteAt))}</span>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      // 4. 更新主按鈕候選數與狀態
+      const matchedCount = getCandidates().length;
+      const enterBtn = document.getElementById('enterMapBtn');
+      const enterMain = document.getElementById('enterMapBtnMain');
+      const enterSub = document.getElementById('enterMapBtnSub');
+
+      if (enterBtn && enterMain && enterSub) {
+        if (matchedCount > 0) {
+          enterBtn.classList.remove('is-warn');
+          enterMain.textContent = '前往衛星選餐廳';
+          enterSub.textContent = `${appState.prefs.category} · ${matchedCount} 間 ➔`;
+        } else {
+          enterBtn.classList.add('is-warn');
+          enterMain.textContent = '目前時段無營業中店家';
+          enterSub.textContent = '改為不限時段 ➔';
+        }
+      }
+    }
+
+    // ==================== 雙畫面切換與 Page 2 HUD 更新 ====================
     function applyChrome() {
       const layerDef = MAP_LAYERS[appState.prefs.layer] || MAP_LAYERS.sat;
       document.body.setAttribute('data-layer', appState.prefs.layer);
+      document.body.setAttribute('data-screen', appState.screen);
 
       const layerBtn = document.getElementById('layerToggleBtn');
       if (layerBtn) layerBtn.textContent = layerDef.label;
 
       const attrib = document.getElementById('mapAttrib');
       if (attrib) attrib.textContent = layerDef.attrib;
-    }
 
-    function renderFilters() {
-      const catRow = document.getElementById('categoryRow');
-      if (catRow) {
-        catRow.innerHTML = '';
-        CATEGORIES.forEach(cat => {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = `cat-pill ${cat === appState.prefs.category ? 'is-active' : ''}`;
-          btn.textContent = cat;
-          btn.onclick = () => {
-            if (appState.isAnimating) return;
-            appState.prefs.category = cat;
-            persistPrefs();
-            renderFilters();
-            triggerDraw(false);
-          };
-          catRow.appendChild(btn);
-        });
-      }
-
-      const openBtn = document.getElementById('openToggleBtn');
-      if (openBtn) {
-        openBtn.textContent = appState.prefs.onlyOpen ? '營業中' : '不限時段';
-        openBtn.classList.toggle('is-active', appState.prefs.onlyOpen);
+      const filterPill = document.getElementById('activeFilterPill');
+      if (filterPill) {
+        const count = getCandidates().length;
+        const openTxt = appState.prefs.onlyOpen ? '營業中' : '不限時段';
+        filterPill.textContent = `${appState.prefs.category} · ${openTxt} (${count})`;
       }
     }
 
-    function updateFooterAvailability(hasPick) {
+    function updateFooterAvailability(hasPick, mode = 'result') {
+      const readyDock = document.getElementById('readyDock');
+      const resultDock = document.getElementById('resultDock');
+      const startBtn = document.getElementById('startSpinBtn');
       const goBtn = document.getElementById('goEatBtn');
       const redrawBtn = document.getElementById('redrawBtn');
-      if (goBtn) goBtn.disabled = !hasPick;
-      if (redrawBtn) redrawBtn.disabled = !hasPick;
+
+      if (mode === 'ready') {
+        if (readyDock) readyDock.hidden = false;
+        if (resultDock) resultDock.hidden = true;
+        if (startBtn) startBtn.disabled = !hasPick;
+      } else {
+        if (readyDock) readyDock.hidden = true;
+        if (resultDock) resultDock.hidden = false;
+        if (goBtn) goBtn.disabled = !hasPick;
+        if (redrawBtn) redrawBtn.disabled = !hasPick;
+      }
+    }
+
+    function renderMapOverviewReady() {
+      clearAnimations();
+      const candidates = getCandidates();
+      appState.currentPick = null;
+      appState.focusPlace = null;
+      applyChrome();
+
+      const ov = computeOverviewCamera(candidates);
+      appState.camera = { lat: ov.lat, lng: ov.lng, zoom: ov.zoom };
+
+      const cardEl = document.getElementById('placeCard');
+      const emptyEl = document.getElementById('emptyPanel');
+      const titleEl = document.getElementById('cardTitle');
+      const subEl = document.getElementById('cardSub');
+      const metaEl = document.getElementById('cardMeta');
+      const hudStatusEl = document.getElementById('hudStatusText');
+
+      if (candidates.length === 0) {
+        cardEl.hidden = true;
+        emptyEl.hidden = false;
+        updateFooterAvailability(false, 'ready');
+        if (hudStatusEl) hudStatusEl.textContent = '目前無營業店家';
+        return;
+      }
+
+      emptyEl.hidden = true;
+      cardEl.hidden = false;
+      cardEl.classList.remove('is-flying', 'is-landed');
+      updateFooterAvailability(true, 'ready');
+
+      const openTxt = appState.prefs.onlyOpen ? '僅限營業中' : '不限營業時段';
+      titleEl.textContent = `已框選 ${candidates.length} 間候選餐廳`;
+      subEl.textContent = `條件：${appState.prefs.category} · ${openTxt}（可先拖曳地圖或點圓點預覽）`;
+      metaEl.textContent = '準備就緒 · 點擊下方按鈕開始衛星縮放輪轉';
+      if (hudStatusEl) hudStatusEl.textContent = `全區鳥瞰待命 · ${candidates.length} 間`;
+    }
+
+    function openMapScreen() {
+      if (getCandidates().length === 0 && appState.prefs.onlyOpen) {
+        appState.prefs.onlyOpen = false;
+        persistPrefs();
+      }
+      appState.screen = 'map';
+      appState.passedIds.clear();
+      document.body.setAttribute('data-screen', 'map');
+      resizeCanvas();
+      preloadCoreTiles(appState.prefs.layer);
+      renderMapOverviewReady();
+    }
+
+    function openHomeScreen() {
+      clearAnimations();
+      appState.screen = 'home';
+      document.body.setAttribute('data-screen', 'home');
+      renderHomeDashboard();
     }
 
     function showPlaceCard(pick, state, stepNum = 0, totalSteps = 0) {
@@ -1214,14 +1505,14 @@
       if (!pick) {
         cardEl.hidden = true;
         emptyEl.hidden = false;
-        updateFooterAvailability(false);
+        updateFooterAvailability(false, 'result');
         if (hudStatusEl) hudStatusEl.textContent = '目前無營業店家';
         return;
       }
 
       emptyEl.hidden = true;
       cardEl.hidden = false;
-      updateFooterAvailability(true);
+      updateFooterAvailability(true, 'result');
 
       if (state === 'flying') {
         cardEl.classList.remove('is-landed');
@@ -1405,14 +1696,74 @@
         const stopCoords = getPlaceCoords(stopPlace);
         const isFinal = idx === totalStops - 1;
         const startCam = { ...appState.camera };
-        const pullDur = isFinal ? 290 : 250;
+        const alreadyZoomedOut = idx === 0 && startCam.zoom <= CRUISE_ZOOM + 0.65;
+        const pullDur = alreadyZoomedOut ? 0 : (isFinal ? 290 : 250);
         const flyZoomDur = isFinal ? 580 : (430 + idx * 25);
         const holdDur = 270;
         const destZoom = isFinal ? LOCK_ZOOM : HOP_FOCUS_ZOOM;
 
-        // 階段 1：縮小地圖拉高（遠離上一間，拉出全區街廓）
+        const runFlyAndFocus = () => {
+          // 階段 2：飛躍到該店座標並放大衛星圖聚焦屋頂
+          const flyFrom = { ...appState.camera };
+          let switchedFocus = false;
+
+          animateCameraSegment(
+            flyZoomDur,
+            t => {
+              const posE = easeInOutCubic(t);
+              appState.camera.lat = lerp(flyFrom.lat, stopCoords.lat, posE);
+              appState.camera.lng = lerp(flyFrom.lng, stopCoords.lng, posE);
+
+              // 先在高空跨過街區，隨後迅速放大俯衝聚焦在該店屋頂
+              const zoomProgress = Math.max(0, (t - 0.16) / 0.84);
+              appState.camera.zoom = lerp(flyFrom.zoom, destZoom, easeOutCubic(zoomProgress));
+
+              if (!switchedFocus && t >= 0.28) {
+                switchedFocus = true;
+                appState.focusPlace = stopPlace;
+                if (hudStatusEl) {
+                  hudStatusEl.textContent = isFinal
+                    ? `放大鎖定 · ${truncateLabel(stopPlace.name, 8)}`
+                    : `放大聚焦 (${idx + 1}/${totalStops}) · ${truncateLabel(stopPlace.name, 8)}`;
+                }
+              }
+            },
+            () => {
+              appState.focusPlace = stopPlace;
+              appState.hopTrail.push(stopCoords);
+
+              if (isFinal) {
+                appState.isAnimating = false;
+                appState.isFocusingStop = false;
+                appState.flightArc = null;
+                appState.hopTrail = [];
+                showPlaceCard(pick, 'landed');
+                return;
+              }
+
+              // 階段 3：短暫放大聚焦停留，讓使用者看清衛星屋頂與店名，隨後再縮小跳轉下一間
+              appState.isFocusingStop = true;
+              showPlaceCard(stopPlace, 'focusing', idx + 1, totalStops);
+              const holdTimer = setTimeout(() => {
+                visitStop(idx + 1);
+              }, holdDur);
+              appState.animTimers.push(holdTimer);
+            }
+          );
+        };
+
+        // 階段 1：縮小地圖拉高（若目前是從全區俯視剛起跳，直接飛往第一站放大聚焦）
         appState.isFocusingStop = false;
         appState.flightArc = { from: { lat: startCam.lat, lng: startCam.lng }, to: stopCoords };
+
+        if (pullDur === 0) {
+          if (hudStatusEl) {
+            hudStatusEl.textContent = `起跳聚焦 (${idx + 1}/${totalStops}) · ${truncateLabel(stopPlace.name, 8)}`;
+          }
+          runFlyAndFocus();
+          return;
+        }
+
         if (hudStatusEl) {
           hudStatusEl.textContent = isFinal
             ? `縮小跳轉 · 最終站 (${idx + 1}/${totalStops})`
@@ -1430,69 +1781,21 @@
             appState.camera.lng = lerp(startCam.lng, pullMidLng, e);
             appState.camera.zoom = lerp(startCam.zoom, CRUISE_ZOOM, e);
           },
-          () => {
-            // 階段 2：飛躍到該店座標並放大衛星圖聚焦屋頂
-            const flyFrom = { ...appState.camera };
-            let switchedFocus = false;
-
-            animateCameraSegment(
-              flyZoomDur,
-              t => {
-                const posE = easeInOutCubic(t);
-                appState.camera.lat = lerp(flyFrom.lat, stopCoords.lat, posE);
-                appState.camera.lng = lerp(flyFrom.lng, stopCoords.lng, posE);
-
-                // 先在高空跨過街區，隨後迅速放大俯衝聚焦在該店屋頂
-                const zoomProgress = Math.max(0, (t - 0.16) / 0.84);
-                appState.camera.zoom = lerp(flyFrom.zoom, destZoom, easeOutCubic(zoomProgress));
-
-                if (!switchedFocus && t >= 0.28) {
-                  switchedFocus = true;
-                  appState.focusPlace = stopPlace;
-                  if (hudStatusEl) {
-                    hudStatusEl.textContent = isFinal
-                      ? `放大鎖定 · ${truncateLabel(stopPlace.name, 8)}`
-                      : `放大聚焦 (${idx + 1}/${totalStops}) · ${truncateLabel(stopPlace.name, 8)}`;
-                  }
-                }
-              },
-              () => {
-                appState.focusPlace = stopPlace;
-                appState.hopTrail.push(stopCoords);
-
-                if (isFinal) {
-                  appState.isAnimating = false;
-                  appState.isFocusingStop = false;
-                  appState.flightArc = null;
-                  appState.hopTrail = [];
-                  showPlaceCard(pick, 'landed');
-                  return;
-                }
-
-                // 階段 3：短暫放大聚焦停留，讓使用者看清衛星屋頂與店名，隨後再縮小跳轉下一間
-                appState.isFocusingStop = true;
-                showPlaceCard(stopPlace, 'focusing', idx + 1, totalStops);
-                const holdTimer = setTimeout(() => {
-                  visitStop(idx + 1);
-                }, holdDur);
-                appState.animTimers.push(holdTimer);
-              }
-            );
-          }
+          runFlyAndFocus
         );
       };
 
       visitStop(0);
     }
 
-    function triggerDraw(excludeCurrent = true) {
+    function triggerDraw(excludeCurrent = true, animate = true) {
       if (appState.isAnimating) return;
       const prevPick = appState.currentPick;
       if (excludeCurrent && prevPick) {
         appState.passedIds.add(placeKey(prevPick));
       }
       const pick = drawNextCandidate(excludeCurrent);
-      runSatelliteRoulette(pick, prevPick, Boolean(pick && excludeCurrent));
+      runSatelliteRoulette(pick, prevPick, Boolean(pick && animate));
     }
 
     function cycleMapLayer() {
@@ -1643,6 +1946,7 @@
         if (parsed.length > 0) {
           appState.places = parsed;
           saveJson(STORAGE_KEYS.placesCache, { places: parsed, syncedAt: new Date().toISOString() });
+          if (appState.screen === 'home') renderHomeDashboard();
         }
       } catch (_) {
         // silent offline fallback
@@ -1656,7 +1960,9 @@
       navigator.geolocation.getCurrentPosition(
         pos => {
           appState.userLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude, hasGps: true };
-          if (!appState.isAnimating && appState.currentPick) {
+          if (appState.screen === 'home') {
+            renderHomeDashboard();
+          } else if (!appState.isAnimating && appState.currentPick) {
             const refreshed = getCandidates().find(c => placeKey(c) === placeKey(appState.currentPick));
             if (refreshed) {
               appState.currentPick = refreshed;
@@ -1671,22 +1977,25 @@
     }
 
     // ==================== 事件綁定與啟動 ====================
-    document.getElementById('layerToggleBtn').onclick = cycleMapLayer;
-
-    document.getElementById('openToggleBtn').onclick = () => {
-      if (appState.isAnimating) return;
+    // Page 1：主畫面事件
+    document.getElementById('homeOpenToggle').onclick = () => {
       appState.prefs.onlyOpen = !appState.prefs.onlyOpen;
       persistPrefs();
-      renderFilters();
-      triggerDraw(false);
+      renderHomeDashboard();
     };
+
+    document.getElementById('enterMapBtn').onclick = openMapScreen;
+
+    // Page 2：衛星俯視抽籤畫面事件
+    document.getElementById('backToHomeBtn').onclick = openHomeScreen;
+    document.getElementById('activeFilterPill').onclick = openHomeScreen;
+    document.getElementById('layerToggleBtn').onclick = cycleMapLayer;
 
     document.getElementById('emptyShowAllBtn').onclick = () => {
       if (appState.isAnimating) return;
       appState.prefs.onlyOpen = false;
       persistPrefs();
-      renderFilters();
-      triggerDraw(false);
+      renderMapOverviewReady();
     };
 
     document.getElementById('zoomInBtn').onclick = () => {
@@ -1705,7 +2014,8 @@
       flyCameraTo(ov, 480);
     };
 
-    document.getElementById('redrawBtn').onclick = () => triggerDraw(true);
+    document.getElementById('startSpinBtn').onclick = () => triggerDraw(false, true);
+    document.getElementById('redrawBtn').onclick = () => triggerDraw(true, true);
     document.getElementById('goEatBtn').onclick = goEatCurrent;
 
     if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
@@ -1717,10 +2027,12 @@
     bindCanvasGestures();
     preloadCoreTiles(appState.prefs.layer);
     applyChrome();
-    renderFilters();
+    renderHomeDashboard();
 
-    const initialPick = drawNextCandidate(false);
-    runSatelliteRoulette(initialPick, null, false);
+    if (appState.screen === 'map') {
+      renderMapOverviewReady();
+    }
+
     startRenderLoop();
     requestGps();
     backgroundSync();
