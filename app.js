@@ -556,6 +556,18 @@
       graphite: '霧面黑（Linear 風）',
       airbnb: '溫潤米（Airbnb 風）'
     };
+    const THEME_META_COLORS = {
+      graphite: '#0F1115',
+      airbnb: '#F7F5F0'
+    };
+
+    function applyThemeDom(theme) {
+      document.body.setAttribute('data-theme', theme);
+      const metaEl = document.getElementById('themeColorMeta') || document.querySelector('meta[name="theme-color"]');
+      if (metaEl && THEME_META_COLORS[theme]) {
+        metaEl.setAttribute('content', THEME_META_COLORS[theme]);
+      }
+    }
 
     const savedPrefs = Object.assign(
       { layer: 'sat', category: '全部', onlyOpen: true, theme: 'graphite' },
@@ -575,7 +587,7 @@
     if (!THEME_ORDER.includes(savedPrefs.theme)) {
       savedPrefs.theme = 'graphite';
     }
-    document.body.setAttribute('data-theme', savedPrefs.theme);
+    applyThemeDom(savedPrefs.theme);
     if (MAP_LAYERS[urlLayer]) savedPrefs.layer = urlLayer;
     if (!MAP_LAYERS[savedPrefs.layer]) savedPrefs.layer = 'sat';
     if (!CATEGORIES.includes(savedPrefs.category)) savedPrefs.category = '全部';
@@ -2745,7 +2757,7 @@
         const curIdx = THEME_ORDER.indexOf(appState.prefs.theme);
         const nextTheme = THEME_ORDER[(curIdx + 1) % THEME_ORDER.length];
         appState.prefs.theme = nextTheme;
-        document.body.setAttribute('data-theme', nextTheme);
+        applyThemeDom(nextTheme);
         persistPrefs();
         showToast(`配色：${THEME_LABELS[nextTheme]}`);
       };
