@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meal-picker-shell-v13';
+const CACHE_NAME = 'meal-picker-shell-v14';
 const SHELL_ASSETS = [
   './',
   './index.html',
@@ -11,7 +11,15 @@ const SHELL_ASSETS = [
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(SHELL_ASSETS))
+    caches.open(CACHE_NAME).then(cache =>
+      Promise.all(
+        SHELL_ASSETS.map(url =>
+          fetch(url, { cache: 'reload' }).then(res => {
+            if (res && res.ok) return cache.put(url, res);
+          })
+        )
+      )
+    )
   );
   self.skipWaiting();
 });
@@ -30,12 +38,11 @@ self.addEventListener('fetch', event => {
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
-  // Let Google Sheets / Google Places API requests hit network directly
   if (url.origin !== self.location.origin) return;
 
-  // Network-first for same-origin shell assets so updates apply immediately, falling back to cache offline
+  // Network-first with cache: 'no-store' to bypass iOS Safari 10-min HTTP cache on GitHub Pages
   event.respondWith(
-    fetch(req)
+    fetch(req, { cache: 'no-store' })
       .then(res => {
         if (res && res.status === 200) {
           const copy = res.clone();

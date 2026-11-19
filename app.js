@@ -2960,7 +2960,41 @@
     };
 
     if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
+      let refreshingSw = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshingSw) return;
+        refreshingSw = true;
+        window.location.reload();
+      });
+      navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(reg => {
+        reg.update().catch(() => {});
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            renderHomeDashboard();
+            reg.update().catch(() => {});
+          }
+        });
+      }).catch(() => {});
+    }
+
+    // 點擊左上角標題區可強制清除 Service Worker 快取並重新載入（解決 iPhone 主畫面 PWA 無重新整理按鈕問題）
+    const titleGroupEl = document.querySelector('.home-title-group');
+    if (titleGroupEl) {
+      titleGroupEl.style.cursor = 'pointer';
+      titleGroupEl.onclick = async () => {
+        showToast('正在檢查並更新至最新版本…');
+        try {
+          if ('serviceWorker' in navigator) {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(regs.map(r => r.unregister()));
+          }
+          if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map(k => caches.delete(k)));
+          }
+        } catch (_) {}
+        window.location.replace(`./?v=${Date.now()}`);
+      };
     }
 
     window.addEventListener('resize', resizeCanvas);

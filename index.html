@@ -1830,12 +1830,66 @@
     }
 
     /* ==================== iOS / iPhone 頂部狀態列防霧安全區退讓 ====================
-       iOS 18+ / 26 在螢幕頂端 ~76px 會強制疊加系統狀態列毛玻璃（Progressive Blur）。
+       iOS 18+ / 26 在螢幕頂端 ~74px 會強制疊加系統狀態列毛玻璃（Progressive Blur）。
        將頂部純色安全區加高至 80px+，讓上方模糊帶只作用於純色背景（純色模糊後仍為 100% 純色），
-       使「今天吃什麼」標題與按鈕完全落在模糊帶下方，徹底消除文字霧感。 */
+       使「今天吃什麼」標題與按鈕完全落在模糊帶下方，並同步微調下方卡片間距以維持單屏完整顯示。 */
     @supports (-webkit-touch-callout: none) {
       .home-header {
         padding-top: max(calc(env(safe-area-inset-top, 48px) + 28px), 80px);
+        padding-bottom: 4px;
+      }
+
+      .home-scroll {
+        gap: 7px;
+        padding-bottom: 8px;
+      }
+
+      .bento-grid {
+        gap: 7px;
+      }
+
+      .bento-card {
+        padding: 9px 11px;
+        gap: 6px;
+      }
+
+      .ring-wrap,
+      .progress-ring {
+        width: 66px;
+        height: 66px;
+      }
+
+      .cat-card {
+        padding: 6.5px 8px 6px;
+        gap: 4px;
+      }
+
+      .matrix-10 {
+        gap: 3.5px;
+      }
+
+      .matrix-cell {
+        height: 15.5px;
+      }
+
+      .dial-dock {
+        padding: 2px 18px calc(env(safe-area-inset-bottom, 6px) + 4px);
+      }
+
+      .dial-launcher {
+        width: 90px;
+        height: 90px;
+        margin-top: -10px;
+      }
+
+      .dial-compass-svg {
+        width: 90px;
+        height: 90px;
+      }
+
+      .dial-core {
+        width: 70px;
+        height: 70px;
       }
 
       .hud-top {
