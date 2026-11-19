@@ -584,6 +584,8 @@
       editingPlaceId: null,
       editingCategory: '便當飯類',
       editingEnabled: true,
+      editingRating: null,
+      editingReviews: null,
       deleteArmed: false,
       resetArmed: false,
       toastTimer: null,
@@ -2291,12 +2293,16 @@
       const delBtn = document.getElementById('deletePlaceBtn');
       const saveBtn = document.getElementById('savePlaceBtn');
       const feedback = document.getElementById('parseFeedback');
+      const syncShortcut = document.getElementById('openSyncFromEditorBtn');
+      const parseBtn = document.getElementById('parseMapsBtn');
 
       appState.editingPlaceId = place ? placeKey(place) : null;
       appState.editingCategory = (place && CATEGORIES.includes(place.category) && place.category !== '全部')
         ? place.category
         : '便當飯類';
       appState.editingEnabled = place ? place.enabled !== false : true;
+      appState.editingRating = (place && Number.isFinite(Number(place.rating))) ? Number(place.rating) : null;
+      appState.editingReviews = (place && Number.isFinite(Number(place.reviews))) ? Number(place.reviews) : null;
       appState.deleteArmed = false;
 
       if (titleEl) titleEl.textContent = place ? '編輯餐廳' : '新增餐廳';
@@ -2309,6 +2315,11 @@
       if (feedback) {
         feedback.textContent = '';
         feedback.classList.remove('is-warn');
+      }
+      if (syncShortcut) syncShortcut.hidden = true;
+      if (parseBtn) {
+        parseBtn.disabled = false;
+        parseBtn.textContent = '自動抓取店名與營業時間';
       }
 
       document.getElementById('editMapsPaste').value = '';
@@ -2338,32 +2349,108 @@
       appState.deleteArmed = false;
     }
 
-    function handleParseMapsPaste() {
-      const raw = document.getElementById('editMapsPaste').value;
+    async function handleParseMapsPaste() {
+      const raw = document.getElementById('editMapsPaste').value.trim();
       const feedback = document.getElementById('parseFeedback');
-      const parsed = parseGoogleMapsInput(raw);
+      const syncShortcut = document.getElementById('openSyncFromEditorBtn');
+      const parseBtn = document.getElementById('parseMapsBtn');
       const nameInput = document.getElementById('editName');
+      const noteInput = document.getElementById('editNote');
       const latInput = document.getElementById('editLat');
       const lngInput = document.getElementById('editLng');
       const urlInput = document.getElementById('editMapsUrl');
 
-      if (!parsed.name && !parsed.maps_url && !Number.isFinite(parsed.lat)) {
-        feedback.textContent = '未偵測到有效 Google Maps 資訊，請貼上完整分享內容。';
+      if (!raw) {
+        feedback.textContent = '請先貼上 Google Maps 分享連結、網址，或直接輸入店名。';
         feedback.classList.add('is-warn');
+        if (syncShortcut) syncShortcut.hidden = true;
         return;
       }
 
+      // 1. 先執行本機即時解析（若為完整網址，立刻先填上能拆出的欄位）
+      const parsed = parseGoogleMapsInput(raw);
       if (parsed.name) nameInput.value = parsed.name;
       if (Number.isFinite(parsed.lat)) latInput.value = String(parsed.lat);
       if (Number.isFinite(parsed.lng)) lngInput.value = String(parsed.lng);
       if (parsed.maps_url) urlInput.value = parsed.maps_url;
 
-      if (Number.isFinite(parsed.lat) && Number.isFinite(parsed.lng)) {
-        feedback.textContent = `✔ 已帶入「${parsed.name || '座標'}」(${parsed.lat.toFixed(4)}, ${parsed.lng.toFixed(4)})`;
+      const hasGas = Boolean((appState.gasConfig.url || '').trim() && (appState.gasConfig.token || '').trim());
+
+      // 2. 若已連接 Apps Script，透過雲端展開短網址 + 呼叫 Google Places API (New) 抓完整資訊
+      if (hasGas) {
+        if (syncShortcut) syncShortcut.hidden = true;
+        if (parseBtn) {
+          parseBtn.disabled = true;
+          parseBtn.textContent = '查詢 Google 地圖中…';
+        }
+        feedback.textContent = '正在透過雲端展開連結並抓取週一～週日營業時間…';
         feedback.classList.remove('is-warn');
-      } else {
-        feedback.textContent = '✔ 已帶入連結（短網址不含明碼座標，可手動填寫經緯度或透過雲端 GAS 自動展開）';
+
+        try {
+          const res = await postGasAction({ action: 'lookup', input: raw });
+          const place = res && res.place;
+          if (!place) {
+            feedback.textContent = '雲端查無相符店家，請確認連結或直接輸入完整店名再試一次。';
+            feedback.classList.add('is-warn');
+            return;
+          }
+
+          if (place.name) nameInput.value = place.name;
+          if (Number.isFinite(Number(place.lat))) latInput.value = String(Number(place.lat));
+          if (Number.isFinite(Number(place.lng))) lngInput.value = String(Number(place.lng));
+          if (place.maps_url) urlInput.value = place.maps_url;
+          if (place.note && !noteInput.value.trim()) noteInput.value = place.note;
+
+          if (place.category && CATEGORIES.includes(place.category) && place.category !== '全部') {
+            appState.editingCategory = place.category;
+            renderEditorCategories();
+          }
+          if (Number.isFinite(Number(place.rating))) appState.editingRating = Number(place.rating);
+          if (Number.isFinite(Number(place.reviews))) appState.editingReviews = Number(place.reviews);
+
+          const hasAnyHours = place.hours && Object.values(place.hours).some(v => String(v || '').trim() !== '');
+          if (hasAnyHours) {
+            renderEditorHours(place.hours);
+          }
+
+          if (res.source === 'google_places_api') {
+            const ratingStr = Number.isFinite(Number(place.rating)) ? ` · ★${Number(place.rating).toFixed(1)}` : '';
+            const hoursMsg = hasAnyHours ? '與週一～週日營業時間' : '（Google 未提供該店營業時間）';
+            feedback.textContent = `✔ 已自動帶入「${place.name || '店家'}」座標${hoursMsg}${ratingStr}`;
+            feedback.classList.remove('is-warn');
+          } else {
+            feedback.textContent = res.placesApiConfigured
+              ? '✔ 已展開連結帶入店名與座標，但 Google Places 查無營業時間，請手動補填。'
+              : '✔ 已展開短網址帶入店名與座標；若要自動抓取 7 天營業時間，請於 Apps Script 填入 Places API Key。';
+            feedback.classList.add('is-warn');
+          }
+        } catch (err) {
+          feedback.textContent = `雲端查詢失敗：${err.message || '請確認網路與 Apps Script 設定'}`;
+          feedback.classList.add('is-warn');
+          if (syncShortcut) syncShortcut.hidden = false;
+        } finally {
+          if (parseBtn) {
+            parseBtn.disabled = false;
+            parseBtn.textContent = '自動抓取店名與營業時間';
+          }
+        }
+        return;
+      }
+
+      // 3. 尚未連接 Apps Script 時，給予明確引導與一鍵設定按鈕
+      const looksLikeShortUrl = /maps\.app\.goo\.gl|goo\.gl\/maps|g\.co\/kgs/i.test(raw);
+      if (Number.isFinite(parsed.lat) && Number.isFinite(parsed.lng)) {
+        feedback.textContent = `✔ 已從網址帶入「${parsed.name || '座標'}」(${parsed.lat.toFixed(4)}, ${parsed.lng.toFixed(4)})。Google Maps 網址本身不含營業時間，設定免費雲端腳本即可自動抓 7 天營業時間。`;
         feedback.classList.add('is-warn');
+        if (syncShortcut) syncShortcut.hidden = false;
+      } else if (looksLikeShortUrl) {
+        feedback.textContent = '短網址（maps.app.goo.gl）受瀏覽器跨域限制無法直接展開，且網址本身不含營業時間。完成下方免費 Apps Script 設定後，貼上連結即可自動帶入店名、座標與 7 天營業時間。';
+        feedback.classList.add('is-warn');
+        if (syncShortcut) syncShortcut.hidden = false;
+      } else {
+        feedback.textContent = '尚未連接雲端抓取服務；設定免費 Apps Script 後，貼上 Google Maps 連結或輸入店名即可自動帶入店名、座標與週一～週日營業時間。';
+        feedback.classList.add('is-warn');
+        if (syncShortcut) syncShortcut.hidden = false;
       }
     }
 
@@ -2402,6 +2489,8 @@
             ...appState.places[idx],
             name,
             category: appState.editingCategory,
+            rating: appState.editingRating !== null ? appState.editingRating : appState.places[idx].rating,
+            reviews: appState.editingReviews !== null ? appState.editingReviews : appState.places[idx].reviews,
             lat,
             lng,
             hours,
@@ -2418,8 +2507,8 @@
           id: generateNextPlaceId(),
           name,
           category: appState.editingCategory,
-          rating: null,
-          reviews: null,
+          rating: appState.editingRating,
+          reviews: appState.editingReviews,
           lat,
           lng,
           hours,
@@ -2632,6 +2721,8 @@
       if (e.target.id === 'editorModal') closeEditorModal();
     };
     document.getElementById('parseMapsBtn').onclick = handleParseMapsPaste;
+    const openSyncFromEditorBtn = document.getElementById('openSyncFromEditorBtn');
+    if (openSyncFromEditorBtn) openSyncFromEditorBtn.onclick = openSyncModal;
     document.getElementById('editEnabledToggle').onclick = () => {
       appState.editingEnabled = !appState.editingEnabled;
       updateEditorEnabledSwitch();
@@ -2698,7 +2789,10 @@
       statusEl.classList.remove('is-err');
       try {
         const res = await postGasAction({ action: 'ping' });
-        statusEl.textContent = `✔ 連線成功！試算表目前有 ${res.rows} 筆資料`;
+        const placesHint = res.placesApiConfigured
+          ? 'Places 自動抓營業時間已啟用'
+          : '尚未填 Places API Key（僅展開短網址）';
+        statusEl.textContent = `✔ 連線成功！試算表 ${res.rows} 筆 · ${placesHint}`;
         showToast('Google Sheets 雙向同步已啟用');
       } catch (err) {
         statusEl.textContent = `連線失敗：${err.message || '請檢查網址與密鑰'}`;

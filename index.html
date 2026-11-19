@@ -1640,14 +1640,35 @@
       color: #FFFFFF;
     }
 
+    .parse-feedback-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
     .parse-feedback {
       font-size: 11.5px;
-      line-height: 1.4;
+      line-height: 1.45;
       color: var(--emerald);
     }
 
     .parse-feedback.is-warn {
       color: #FBBF24;
+    }
+
+    .parse-action-link {
+      align-self: flex-start;
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: rgba(56, 189, 248, 0.14);
+      border: 1px solid rgba(56, 189, 248, 0.42);
+      color: #7DD3FC;
+      font-size: 11.5px;
+      font-weight: 600;
+    }
+
+    .parse-action-link[hidden] {
+      display: none;
     }
 
     .hours-grid {
@@ -1699,6 +1720,17 @@
 
     .small-btn:active {
       transform: scale(0.95);
+    }
+
+    .small-btn:disabled {
+      opacity: 0.55;
+      cursor: wait;
+    }
+
+    .small-btn.is-accent {
+      background: rgba(234, 88, 40, 0.18);
+      border-color: rgba(234, 88, 40, 0.52);
+      color: #FFB499;
     }
 
     .modal-foot {
@@ -2009,15 +2041,18 @@
         <div class="modal-body">
           <!-- 快速貼上 Google Maps -->
           <div class="form-section">
-            <div class="form-section-title">快速貼上 Google Maps 分享文字或網址</div>
+            <div class="form-section-title">貼上 Google Maps 連結或輸入店名（自動抓取資訊）</div>
             <textarea
               id="editMapsPaste"
               class="field-textarea"
-              placeholder="從 Google Maps 複製店家分享連結或網址貼在這裡，按解析自動帶入店名與經緯度座標…"
+              placeholder="貼上 maps.app.goo.gl 短網址、Google Maps 分享文字，或直接輸入店名（例：永留香臭豆腐）…"
             ></textarea>
             <div class="inline-row">
-              <button type="button" id="parseMapsBtn" class="small-btn">解析帶入店名與座標</button>
+              <button type="button" id="parseMapsBtn" class="small-btn is-accent">自動抓取店名與營業時間</button>
+            </div>
+            <div class="parse-feedback-bar">
               <span class="parse-feedback" id="parseFeedback"></span>
+              <button type="button" id="openSyncFromEditorBtn" class="parse-action-link" hidden>前往設定雲端自動抓取（Apps Script）→</button>
             </div>
           </div>
 
@@ -2102,8 +2137,8 @@
           </div>
 
           <div class="form-section">
-            <div class="form-section-title">Google Apps Script 雙向雲端同步（選用）</div>
-            <p class="sync-hint">將專案內 <code>scripts/google_apps_script.gs</code> 貼入 Google 試算表部署成 Web App 後，填入網址與自訂密鑰即可自動雙向寫回雲端。</p>
+            <div class="form-section-title">Google Apps Script 雲端同步＋自動抓營業時間</div>
+            <p class="sync-hint">將專案內 <code>scripts/google_apps_script.gs</code> 貼入 Google 試算表部署成 Web App，並填入免費 Google Places API Key 後，即可雙向同步試算表，並在貼上 <code>maps.app.goo.gl</code> 連結時自動帶入店名、座標與週一～週日營業時間。</p>
             <div class="field-group">
               <label class="field-label" for="gasUrlInput">Web App 網址（.../exec）</label>
               <input type="url" id="gasUrlInput" class="field-input" placeholder="https://script.google.com/macros/s/.../exec" />
