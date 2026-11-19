@@ -1,21 +1,20 @@
-# Meal Picker（今天吃什麼｜俯視地圖 × 360° Google 街景 PWA）
+# Meal Picker（今天吃什麼｜俯視衛星圖縮放輪轉抽籤 PWA）
 
-專為 iPhone 打造的**極簡真實地圖與 360° 街景抽籤 PWA**。打開即從 49 間台中北區口袋名單抽選下一餐，動畫結束無縫跳進店家門口的 **360° 真實 Google 街景**，可手指左右環視店面外觀；點擊「出發去吃」直接喚醒 Google Maps App 導航。
+專為 iPhone 打造的**極簡真實俯視衛星圖抽籤 PWA**。打開即載入台中北區 49 間口袋名單的真實經緯度座標與免 API Key 衛星俯視圖；按下「輪轉抽下一間」，鏡頭會在多間候選餐廳之間**縮小拉高 $\rightarrow$ 飛躍跳轉 $\rightarrow$ 放大衛星圖聚焦屋頂 $\rightarrow$ 縮小跳轉下一間**，最後深度俯衝鎖定中獎店家，點擊「出發去吃」直接喚醒 Google Maps App 導航。
 
 - **線上版（GitHub Pages）**：https://berton0310.github.io/meal-picker/
 - **口袋名單試算表（Google Sheets）**：https://docs.google.com/spreadsheets/d/1Fi_2OYvhbuii5sqEGOT5n5EWnjiYqSi-6nlnPFzBp7g/edit
 
 ---
 
-## 三種「輪轉跳街景」動畫轉場（頂部即時切換）
+## 核心互動與視覺亮點
 
-1. **A 俯衝跳街景（`dive`）**：高空衛星俯視地圖在候選店間快速跳點 $\rightarrow$ 鎖定屋頂極速俯衝放大 $\rightarrow$ 穿雲切入該店 360° Google 街景（左上保留子母定位小雷達）。
-2. **B 轉輪跳街景（`reel`）**：中央立體座標轉輪高速滾動店名與經緯度 $\rightarrow$ 過衝定格展開，直接揭曉背景已預載好的 360° 店門口街景。
-3. **C 子母雙視角（`split`）**：上半部俯視地圖執行全區雷達掃描並推近，下半部數位快門同步跳轉該店 360° 街景，定格時上下同框呈現街道方位與店門口實景。
-
-### 自由視角切換 ＋ 三種真實圖資
-- **三種視角一鍵切換**：`滿版街景`（含左上角可點擊放大的子母雷達窗）、`上下雙視角`、`俯視地圖`（附快速按鈕跳進 360° 街景）。
-- **三種真實地圖底圖（右上角切換）**：**衛星（Esri）**、**暗黑（OpenStreetMap 高對比）**、**街道（OpenStreetMap 原色）**。
+1. **俯視衛星圖縮放輪轉**：每次抽籤會自動挑選空間分散的候選路徑並提前預載高倍率衛星圖磚；鏡頭依序「拉高縮小 (`Z14.5`) $\rightarrow$ 跳轉飛往候選店 $\rightarrow$ 放大聚焦屋頂 (`Z17.4`) 短暫停留確認 $\rightarrow$ 再縮小跳轉下一間」，最後俯衝至 `Z17.6` 鎖定中獎店家並彈出資訊卡。
+2. **三種免 Key 真實底圖（右上角一鍵切換）**：
+   - **衛星（預設）**：Esri World Imagery 真實衛星俯視圖 ＋ World Transportation 路網疊層
+   - **暗黑**：OpenStreetMap 繁體中文高對比暗黑街道圖
+   - **街道**：OpenStreetMap 原色繁體中文街道圖
+3. **自由探索**：支援拖曳平移、雙指／滾輪縮放、右側 `＋`/`－`/`全區` 按鈕，以及**直接點擊地圖上任一餐廳圓點**平滑飛往該店。
 
 ---
 
@@ -23,10 +22,10 @@
 
 ```text
 meal-picker/
-├── index.html                  # 360° 街景 × 俯視地圖 × 3D 轉輪三合一主介面
-├── app.js                      # 圖磚金字塔、街景背景預載、三種轉場引擎與權重計算
+├── index.html                  # 全螢幕俯視衛星圖介面與極簡懸浮 HUD
+├── app.js                      # Web Mercator 圖磚金字塔、縮放輪轉鏡頭引擎與抽籤邏輯
 ├── manifest.json               # PWA 全螢幕設定
-├── sw.js                       # Service Worker 離線快取（v4）
+├── sw.js                       # Service Worker 離線快取（v5）
 ├── assets/
 │   ├── icon.svg                # 向量 App Icon
 │   ├── icon-180.png            # iOS apple-touch-icon

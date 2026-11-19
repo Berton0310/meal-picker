@@ -89,117 +89,6 @@
       }
     }
 
-    /* ==================== 主舞台：俯視地圖 ＋ 360° 街景 ＋ 3D 轉輪 ==================== */
-    .stage-viewport {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-    }
-
-    /* --- 360° 街景面板 --- */
-    .sv-pane {
-      position: absolute;
-      inset: 0;
-      z-index: 1;
-      background: #0D1217;
-      overflow: hidden;
-      transition: opacity 0.28s ease;
-    }
-
-    .sv-frame {
-      width: 100%;
-      height: 100%;
-      border: 0;
-      display: block;
-      background: #0D1217;
-    }
-
-    .sv-badge {
-      position: absolute;
-      top: calc(env(safe-area-inset-top, 10px) + 134px);
-      right: 12px;
-      z-index: 3;
-      padding: 5px 10px;
-      border-radius: 999px;
-      background: rgba(14, 19, 24, 0.76);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      font-size: 11px;
-      font-weight: 600;
-      color: rgba(244, 246, 248, 0.9);
-      pointer-events: none;
-    }
-
-    /* 抽籤輪轉期間的街景快門遮罩 */
-    .sv-shutter {
-      position: absolute;
-      inset: 0;
-      z-index: 4;
-      background: radial-gradient(circle at 50% 45%, rgba(26, 36, 46, 0.94) 0%, rgba(10, 14, 19, 0.98) 100%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 20px;
-      text-align: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.26s ease, transform 0.32s var(--ease-spring);
-      transform: scale(1.03);
-    }
-
-    .sv-shutter.is-active {
-      opacity: 1;
-      pointer-events: auto;
-      transform: scale(1);
-    }
-
-    .shutter-tag {
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: rgba(234, 88, 40, 0.18);
-      border: 1px solid rgba(234, 88, 40, 0.55);
-      font-family: var(--font-mono);
-      font-size: 10.5px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      color: #FF8E63;
-    }
-
-    .shutter-name {
-      font-size: clamp(1.25rem, 5vw, 1.55rem);
-      font-weight: 700;
-      color: #F4F6F8;
-      letter-spacing: -0.02em;
-    }
-
-    .shutter-coord {
-      font-family: var(--font-mono);
-      font-size: 11.5px;
-      color: #9AA6B2;
-    }
-
-    /* --- 俯視地圖面板 --- */
-    .map-pane {
-      position: absolute;
-      inset: 0;
-      z-index: 2;
-      background-color: var(--map-fallback);
-      overflow: hidden;
-    }
-
-    .map-pane.is-diving-portal {
-      animation: divePortal 0.28s cubic-bezier(0.32, 0, 0.67, 1) forwards;
-    }
-
-    @keyframes divePortal {
-      0% { transform: scale(1); opacity: 1; filter: blur(0px); }
-      100% { transform: scale(1.75); opacity: 0; filter: blur(3px); }
-    }
-
     .map-canvas {
       position: absolute;
       inset: 0;
@@ -214,220 +103,15 @@
       cursor: grabbing;
     }
 
-    .pip-caption {
-      display: none;
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      padding: 4px 6px;
-      background: linear-gradient(0deg, rgba(8, 12, 16, 0.88) 0%, rgba(8, 12, 16, 0) 100%);
-      font-size: 9.5px;
-      font-weight: 600;
-      color: #F4F6F8;
-      text-align: center;
-      pointer-events: none;
-    }
-
-    /* ==================== 三種視角佈局切換 ==================== */
-    /* 1. 滿版 360° 街景 ＋ 左上角子母小雷達 */
-    .stage-viewport[data-view="streetview"] .sv-pane {
-      opacity: 1;
-      pointer-events: auto;
-      z-index: 1;
-    }
-
-    .stage-viewport[data-view="streetview"] .map-pane {
-      top: calc(env(safe-area-inset-top, 10px) + 134px);
-      left: 12px;
-      right: auto;
-      bottom: auto;
-      width: 112px;
-      height: 112px;
-      border-radius: 14px;
-      border: 1.5px solid rgba(255, 255, 255, 0.3);
-      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.52);
-      z-index: 4;
-      cursor: pointer;
-    }
-
-    .stage-viewport[data-view="streetview"] .map-pane .map-canvas {
-      cursor: pointer;
-    }
-
-    .stage-viewport[data-view="streetview"] .pip-caption {
-      display: block;
-    }
-
-    /* 2. 上下子母雙視角（上俯視地圖 47% ＋ 下 360° 街景 53%） */
-    .stage-viewport[data-view="split"] .map-pane {
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: auto;
-      height: 46.5%;
-      z-index: 2;
-      border-bottom: 2px solid rgba(255, 255, 255, 0.22);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-    }
-
-    .stage-viewport[data-view="split"] .sv-pane {
-      top: 46.5%;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      height: auto;
-      opacity: 1;
-      pointer-events: auto;
-      z-index: 1;
-    }
-
-    .stage-viewport[data-view="split"] .sv-badge {
-      top: 12px;
-      right: 56px;
-      left: auto;
-    }
-
-    /* 3. 純俯視地圖（360° 街景背景預載但保持視覺透明，零等待切入） */
-    .stage-viewport[data-view="map"] .map-pane {
-      inset: 0;
-      z-index: 2;
-    }
-
-    .stage-viewport[data-view="map"] .sv-pane {
-      opacity: 0;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    /* --- 模式 B：3D 座標輪轉抽籤層 --- */
-    .reel-overlay {
-      position: absolute;
-      inset: 0;
-      z-index: 6;
-      background: rgba(8, 12, 16, 0.72);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px 18px 80px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.24s ease, transform 0.34s var(--ease-spring);
-    }
-
-    .reel-overlay.is-active {
-      opacity: 1;
-      pointer-events: auto;
-      transform: scale(1);
-    }
-
-    .reel-overlay.is-expanding {
-      opacity: 0;
-      transform: scale(1.24);
-    }
-
-    .reel-window {
-      width: 100%;
-      max-width: 356px;
-      border-radius: 20px;
-      background: rgba(16, 22, 29, 0.94);
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
-      padding: 12px 12px 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .reel-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-family: var(--font-mono);
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      color: #FF8E63;
-      padding: 0 4px;
-    }
-
-    .reel-viewport {
-      position: relative;
-      height: 222px;
-      border-radius: 14px;
-      background: #0A0E13;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      overflow: hidden;
-    }
-
-    .reel-reticle {
-      position: absolute;
-      top: 74px;
-      left: 8px;
-      right: 8px;
-      height: 74px;
-      border-radius: 11px;
-      border: 1.5px solid rgba(234, 88, 40, 0.85);
-      background: rgba(234, 88, 40, 0.08);
-      pointer-events: none;
-      z-index: 3;
-    }
-
-    .reel-mask {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(180deg, rgba(10, 14, 19, 0.9) 0%, rgba(10, 14, 19, 0) 32%, rgba(10, 14, 19, 0) 68%, rgba(10, 14, 19, 0.9) 100%);
-      pointer-events: none;
-      z-index: 2;
-    }
-
-    .reel-track {
-      padding: 74px 14px;
-      will-change: transform;
-    }
-
-    .reel-track.is-blur {
-      filter: blur(0.6px);
-    }
-
-    .reel-item {
-      height: 74px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      text-align: center;
-    }
-
-    .reel-item-name {
-      font-size: 17px;
-      font-weight: 700;
-      color: #F4F6F8;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 100%;
-    }
-
-    .reel-item-meta {
-      font-family: var(--font-mono);
-      font-size: 10.5px;
-      color: #93A0AC;
-    }
-
-    /* 頂部與底部保護遮罩 */
     .hud-scrim-top {
       position: absolute;
       top: 0;
       left: 0;
       right: 0;
-      height: 152px;
-      background: linear-gradient(180deg, rgba(8, 12, 16, 0.65) 0%, rgba(8, 12, 16, 0) 100%);
+      height: 120px;
+      background: linear-gradient(180deg, rgba(8, 12, 16, 0.64) 0%, rgba(8, 12, 16, 0) 100%);
       pointer-events: none;
-      z-index: 5;
+      z-index: 2;
     }
 
     .hud-scrim-bottom {
@@ -436,18 +120,18 @@
       left: 0;
       right: 0;
       height: 224px;
-      background: linear-gradient(0deg, rgba(8, 12, 16, 0.72) 0%, rgba(8, 12, 16, 0) 100%);
+      background: linear-gradient(0deg, rgba(8, 12, 16, 0.74) 0%, rgba(8, 12, 16, 0) 100%);
       pointer-events: none;
-      z-index: 5;
+      z-index: 2;
     }
 
-    /* ==================== 1. 頂部 HUD 控制區 ==================== */
+    /* ==================== 1. 頂部極簡控制列 ==================== */
     .hud-top {
       position: absolute;
       top: 0;
       left: 0;
       right: 0;
-      z-index: 7;
+      z-index: 5;
       padding: calc(env(safe-area-inset-top, 10px) + 10px) 12px 0;
       display: flex;
       flex-direction: column;
@@ -459,68 +143,10 @@
       pointer-events: auto;
     }
 
-    .hud-bar-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .mode-switcher {
-      flex: 1;
-      min-width: 0;
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 3px;
-      padding: 4px;
-      border-radius: 13px;
-      background: var(--glass-bg);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border: 1px solid var(--glass-border);
-    }
-
-    .mode-tab {
-      padding: 7px 3px;
-      border-radius: 9px;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--ink-muted);
-      letter-spacing: -0.02em;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      transition: background-color 0.2s ease, color 0.2s ease;
-    }
-
-    .mode-tab.is-active {
-      background: var(--accent);
-      color: var(--accent-ink);
-      box-shadow: 0 2px 8px rgba(234, 88, 40, 0.35);
-    }
-
-    .layer-toggle {
-      flex-shrink: 0;
-      height: 38px;
-      padding: 0 11px;
-      border-radius: 13px;
-      background: var(--glass-bg);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border: 1px solid var(--glass-border);
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--ink-main);
-      transition: transform 0.14s ease;
-    }
-
-    .layer-toggle:active {
-      transform: scale(0.95);
-    }
-
     .filter-bar {
       display: flex;
       align-items: center;
-      gap: 7px;
+      gap: 6px;
     }
 
     .category-scroll {
@@ -561,7 +187,7 @@
 
     .open-toggle {
       flex-shrink: 0;
-      padding: 6px 11px;
+      padding: 6px 10px;
       border-radius: 999px;
       background: var(--glass-bg);
       backdrop-filter: blur(10px);
@@ -579,14 +205,32 @@
       border-color: var(--accent);
     }
 
+    .layer-toggle {
+      flex-shrink: 0;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--ink-main);
+      transition: transform 0.14s ease;
+    }
+
+    .layer-toggle:active {
+      transform: scale(0.95);
+    }
+
     .hud-telemetry {
       align-self: stretch;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-      padding: 5px 10px;
-      border-radius: 10px;
+      padding: 6px 11px;
+      border-radius: 11px;
       background: rgba(12, 16, 21, 0.72);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
@@ -610,13 +254,13 @@
       text-overflow: ellipsis;
     }
 
-    /* ==================== 2. 底部控制列與店家資訊卡 ==================== */
+    /* ==================== 2. 底部右側縮放工具 ＋ 懸浮資訊卡片 ==================== */
     .bottom-dock-wrap {
       position: absolute;
       left: 0;
       right: 0;
       bottom: 0;
-      z-index: 7;
+      z-index: 5;
       padding: 0 12px calc(env(safe-area-inset-bottom, 12px) + 12px);
       display: flex;
       flex-direction: column;
@@ -624,82 +268,25 @@
       pointer-events: none;
     }
 
-    .enter-sv-pill {
-      align-self: center;
-      padding: 8px 16px;
-      border-radius: 999px;
-      background: rgba(234, 88, 40, 0.94);
-      color: #FFFFFF;
-      font-size: 12.5px;
-      font-weight: 700;
-      box-shadow: 0 10px 26px rgba(234, 88, 40, 0.42), 0 0 0 1px rgba(255, 255, 255, 0.25);
-      pointer-events: auto;
-      transition: transform 0.14s ease, opacity 0.2s ease;
-    }
-
-    .enter-sv-pill[hidden] {
-      display: none;
-    }
-
-    .enter-sv-pill:active {
-      transform: scale(0.95);
-    }
-
-    .bottom-controls-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      pointer-events: none;
-    }
-
-    .view-pills {
-      display: inline-flex;
-      align-items: center;
-      gap: 3px;
-      padding: 3px;
-      border-radius: 12px;
-      background: var(--glass-bg);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--glass-border);
-      pointer-events: auto;
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.34);
-    }
-
-    .view-pill {
-      padding: 6px 8px;
-      border-radius: 9px;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--ink-muted);
-      white-space: nowrap;
-      transition: background-color 0.2s ease, color 0.2s ease;
-    }
-
-    .view-pill.is-active {
-      background: var(--pill-active-bg);
-      color: var(--pill-active-ink);
-      font-weight: 700;
-    }
-
     .map-tools {
+      align-self: flex-end;
       display: flex;
-      align-items: center;
-      gap: 5px;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
       pointer-events: auto;
     }
 
     .map-tool-btn {
-      width: 34px;
-      height: 34px;
+      width: 38px;
+      height: 36px;
       border-radius: 11px;
       background: var(--glass-bg);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--glass-border);
       color: var(--ink-main);
-      font-size: 15px;
+      font-size: 16px;
       font-weight: 600;
       display: inline-flex;
       align-items: center;
@@ -714,8 +301,8 @@
 
     .map-tool-wide {
       width: auto;
-      padding: 0 10px;
-      font-size: 11px;
+      padding: 0 11px;
+      font-size: 11.5px;
       font-weight: 600;
     }
 
@@ -726,23 +313,23 @@
       -webkit-backdrop-filter: blur(18px);
       border: 1px solid var(--glass-border);
       border-radius: 20px;
-      padding: 14px 15px 12px;
+      padding: 15px 15px 13px;
       box-shadow: 0 18px 42px rgba(0, 0, 0, 0.45);
       display: flex;
       flex-direction: column;
-      gap: 11px;
+      gap: 12px;
     }
 
     .place-card {
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      transition: opacity 0.22s ease, transform 0.26s var(--ease-spring);
+      gap: 5px;
+      transition: opacity 0.2s ease, transform 0.24s var(--ease-spring);
     }
 
     .place-card.is-flying {
-      opacity: 0.65;
-      transform: scale(0.97) translateY(3px);
+      opacity: 0.72;
+      transform: scale(0.98) translateY(2px);
     }
 
     .place-card.is-landed {
@@ -755,7 +342,7 @@
     }
 
     .card-title {
-      font-size: clamp(1.2rem, 4.7vw, 1.42rem);
+      font-size: clamp(1.22rem, 4.7vw, 1.45rem);
       font-weight: 700;
       letter-spacing: -0.02em;
       line-height: 1.24;
@@ -863,64 +450,16 @@
 </head>
 <body data-layer="sat">
   <main class="app-shell">
-    <div class="stage-viewport" id="stageViewport" data-view="streetview">
-      <!-- 1. 360° 真實 Google 街景視窗（含背景預載快門遮罩） -->
-      <section class="sv-pane" id="svPane" aria-label="店家 360 度 Google 街景">
-        <iframe
-          id="svFrame"
-          class="sv-frame"
-          title="店家 360 度 Google 街景"
-          allow="accelerometer; gyroscope"
-          referrerpolicy="no-referrer-when-downgrade"
-          allowfullscreen
-        ></iframe>
-        <div class="sv-badge">360° 實景 · 左右滑看店門</div>
-        <div class="sv-shutter" id="svShutter">
-          <span class="shutter-tag">360° STREET VIEW SYNC</span>
-          <div class="shutter-name" id="shutterStoreName">準備同步街景座標</div>
-          <div class="shutter-coord" id="shutterCoord">24.1558°N · 120.6822°E</div>
-        </div>
-      </section>
+    <canvas id="mapCanvas" class="map-canvas"></canvas>
+    <div class="hud-scrim-top"></div>
+    <div class="hud-scrim-bottom"></div>
 
-      <!-- 2. 俯視真實衛星／街道地圖畫布（於滿版街景時自動收成左上角子母雷達窗） -->
-      <section class="map-pane" id="mapPane" aria-label="俯視地圖">
-        <canvas id="mapCanvas" class="map-canvas"></canvas>
-        <div class="pip-caption">俯視定位 · 點擊放大</div>
-      </section>
-
-      <!-- 3. 模式 B 專屬：3D 座標輪轉抽籤視窗 -->
-      <div class="reel-overlay" id="reelOverlay" aria-hidden="true">
-        <div class="reel-window">
-          <div class="reel-header">
-            <span>TAICHUNG NORTH · 360° REEL</span>
-            <span id="reelCountTag">LOCKING</span>
-          </div>
-          <div class="reel-viewport">
-            <div class="reel-reticle"></div>
-            <div class="reel-mask"></div>
-            <div class="reel-track" id="reelTrack"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="hud-scrim-top"></div>
-      <div class="hud-scrim-bottom"></div>
-    </div>
-
-    <!-- 4. 頂部 HUD：三種輪轉跳街景方式 ＋ 底圖切換 ＋ 篩選與座標 -->
+    <!-- 1. 頂部極簡篩選與即時座標 HUD -->
     <header class="hud-top">
-      <div class="hud-bar-row">
-        <div class="mode-switcher" role="tablist" aria-label="輪轉跳街景轉場方式">
-          <button type="button" class="mode-tab is-active" data-mode="dive">A 俯衝跳街景</button>
-          <button type="button" class="mode-tab" data-mode="reel">B 轉輪跳街景</button>
-          <button type="button" class="mode-tab" data-mode="split">C 子母雙視角</button>
-        </div>
-        <button type="button" id="layerToggleBtn" class="layer-toggle" aria-label="切換地圖底圖">衛星</button>
-      </div>
-
       <div class="filter-bar">
         <div class="category-scroll" id="categoryRow"></div>
         <button type="button" id="openToggleBtn" class="open-toggle is-active">營業中</button>
+        <button type="button" id="layerToggleBtn" class="layer-toggle" aria-label="切換地圖底圖">衛星</button>
       </div>
 
       <div class="hud-telemetry">
@@ -929,22 +468,12 @@
       </div>
     </header>
 
-    <!-- 5. 底部控制列（視角切換 ＋ 縮放）與極簡店家資訊卡 -->
+    <!-- 2. 底部右側縮放微調 ＋ 店家資訊卡與雙動作列 -->
     <section class="bottom-dock-wrap">
-      <button type="button" id="enterSvFloatingBtn" class="enter-sv-pill" hidden>進入 360° 店門街景 ↗</button>
-
-      <div class="bottom-controls-row">
-        <div class="view-pills" role="group" aria-label="視角佈局切換">
-          <button type="button" class="view-pill is-active" data-view="streetview">滿版街景</button>
-          <button type="button" class="view-pill" data-view="split">上下雙視角</button>
-          <button type="button" class="view-pill" data-view="map">俯視地圖</button>
-        </div>
-
-        <div class="map-tools">
-          <button type="button" id="zoomInBtn" class="map-tool-btn" aria-label="放大地圖">＋</button>
-          <button type="button" id="zoomOutBtn" class="map-tool-btn" aria-label="縮小地圖">－</button>
-          <button type="button" id="overviewBtn" class="map-tool-btn map-tool-wide" aria-label="回到全區鳥瞰">全區</button>
-        </div>
+      <div class="map-tools">
+        <button type="button" id="zoomInBtn" class="map-tool-btn" aria-label="放大地圖">＋</button>
+        <button type="button" id="zoomOutBtn" class="map-tool-btn" aria-label="縮小地圖">－</button>
+        <button type="button" id="overviewBtn" class="map-tool-btn map-tool-wide" aria-label="回到全區鳥瞰">全區</button>
       </div>
 
       <footer class="bottom-sheet" aria-live="polite">
@@ -962,10 +491,10 @@
 
         <div class="action-dock">
           <button type="button" id="goEatBtn" class="action-primary">出發去吃</button>
-          <button type="button" id="redrawBtn" class="action-secondary">俯衝抽下一間</button>
+          <button type="button" id="redrawBtn" class="action-secondary">輪轉抽下一間</button>
         </div>
 
-        <div class="map-attrib" id="mapAttrib">衛星圖資 © Esri · World Transportation · Google Street View</div>
+        <div class="map-attrib" id="mapAttrib">衛星圖資 © Esri · World Transportation</div>
       </footer>
     </section>
   </main>
